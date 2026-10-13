@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+release/
+.DS_Store
+.env
+# Playwright MCP scratch output
+.playwright-mcp/
+_git

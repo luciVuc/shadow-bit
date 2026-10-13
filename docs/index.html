@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShadowBit — one encrypted file, one password, no accounts</title>
+    <meta
+      name="description"
+      content="ShadowBit locks a folder into a single encrypted .vault file you can email or carry on a USB stick. AES-256-GCM, scrypt, a recovery key, and keyfile support. CLI and Electron desktop app."
+    />
+
+    <!-- Local styles. utilities.css must come after index.css: it holds the
+         layout utilities and, like the Tailwind CDN it replaces, wins ties
+         against component rules. -->
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="utilities.css" />
+  </head>
+
+  <body class="bg-sb-bg text-sb-text antialiased">
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <!-- ─── NAVBAR ──────────────────────────────────────────────────────── -->
+    <header id="navbar" class="navbar fixed top-0 left-0 right-0 z-50">
+      <nav
+        class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"
+      >
+        <a href="#hero" class="nav-logo flex items-center gap-2">
+          <span class="logo-icon">🗝️</span>
+          <span class="font-bold text-lg tracking-tight text-white"
+            >ShadowBit</span
+          >
+          <span class="version-badge">v1.0</span>
+        </a>
+
+        <ul class="hidden md:flex items-center gap-1 text-sm">
+          <li><a href="#features" class="nav-link">Features</a></li>
+          <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+          <li><a href="#install" class="nav-link">Install</a></li>
+          <li><a href="#workflows" class="nav-link">Recipes</a></li>
+          <li><a href="#faq" class="nav-link">Q&amp;A</a></li>
+          <li><a href="#cli" class="nav-link">CLI</a></li>
+          <li><a href="#gui" class="nav-link">GUI</a></li>
+          <li><a href="#security" class="nav-link">Security</a></li>
+        </ul>
+
+        <div class="flex items-center gap-3">
+          <a href="#install" class="btn-primary text-sm">Get Started</a>
+          <button
+            id="menu-toggle"
+            class="md:hidden text-sb-muted hover:text-white p-1"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Mobile menu -->
+      <div
+        id="mobile-menu"
+        class="mobile-menu hidden md:hidden border-t border-sb-border"
+      >
+        <ul class="px-6 py-4 flex flex-col gap-2 text-sm">
+          <li><a href="#features" class="mobile-nav-link">Features</a></li>
+          <li>
+            <a href="#how-it-works" class="mobile-nav-link">How It Works</a>
+          </li>
+          <li><a href="#workflows" class="mobile-nav-link">Recipes</a></li>
+          <li><a href="#faq" class="mobile-nav-link">Q&amp;A</a></li>
+          <li><a href="#install" class="mobile-nav-link">Install</a></li>
+          <li><a href="#cli" class="mobile-nav-link">CLI Reference</a></li>
+          <li><a href="#gui" class="mobile-nav-link">Desktop GUI</a></li>
+          <li><a href="#security" class="mobile-nav-link">Security</a></li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ─── HERO ────────────────────────────────────────────────────────── -->
+      <section
+        id="hero"
+        class="hero-section min-h-screen flex flex-col items-center justify-center px-6 pt-16 relative overflow-hidden"
+      >
+        <!-- Animated background grid -->
+        <div class="hero-grid" aria-hidden="true"></div>
+        <!-- Glow orbs -->
+        <div class="glow-orb glow-orb-1" aria-hidden="true"></div>
+        <div class="glow-orb glow-orb-2" aria-hidden="true"></div>
+
+        <div class="relative z-10 text-center max-w-4xl mx-auto">
+          <!-- Animated vault icon -->
+          <div class="hero-icon-wrapper mb-8">
+            <div class="hero-vault-ring" aria-hidden="true"></div>
+            <div
+              class="hero-vault-ring hero-vault-ring-2"
+              aria-hidden="true"
+            ></div>
+            <span class="hero-icon" aria-hidden="true">🔐</span>
+          </div>
+
+          <div
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-sb-cyan/30 bg-sb-cyan/5 text-sb-cyan text-xs font-mono mb-6"
+          >
+            <span
+              class="w-1.5 h-1.5 rounded-full bg-sb-cyan animate-pulse"
+            ></span>
+            AES-256-GCM · scrypt · Electron · CLI
+          </div>
+
+          <h1
+            id="hero-headline"
+            class="hero-headline text-5xl md:text-7xl font-extrabold leading-tight mb-6"
+          >
+            Shadow<span class="text-gradient">Bit</span>
+          </h1>
+
+          <p
+            id="hero-tagline"
+            class="text-xl md:text-2xl text-sb-muted max-w-2xl mx-auto mb-4 leading-relaxed"
+          ></p>
+          <p
+            id="hero-subtagline"
+            class="text-base md:text-lg text-sb-muted/70 max-w-xl mx-auto mb-10"
+          ></p>
+
+          <div class="flex flex-wrap items-center justify-center gap-4">
+            <a href="#install" class="btn-hero-primary">
+              <span>Get Started</span>
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </a>
+            <a href="#cli" class="btn-hero-secondary">
+              <span class="font-mono text-sm">$ shadow-bit --help</span>
+            </a>
+          </div>
+
+          <!-- Stat pills -->
+          <div class="flex flex-wrap items-center justify-center gap-4 mt-14">
+            <div class="stat-pill">
+              <span class="stat-label">Cipher</span
+              ><span class="stat-value">AES-256-GCM</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">KDF</span
+              ><span class="stat-value">scrypt N=2¹⁷</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">Format</span
+              ><span class="stat-value">v3 · self-contained</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">Tests</span
+              ><span class="stat-value">232 passing</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">Platforms</span
+              ><span class="stat-value">macOS · Win · Linux</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div
+          class="absolute bottom-10 left-1/2 -translate-x-1/2 scroll-indicator"
+          aria-hidden="true"
+        >
+          <div class="scroll-dot"></div>
+        </div>
+      </section>
+
+      <!-- ─── FEATURES ─────────────────────────────────────────────────────── -->
+      <section id="features" class="py-24 px-6 section-alt">
+        <div class="max-w-7xl mx-auto">
+          <div class="section-tag mb-4">Capabilities</div>
+          <h2 class="section-heading mb-4">Everything you need.</h2>
+          <p class="text-sb-muted text-lg mb-16 max-w-2xl">
+            AES-256-GCM or ChaCha20-Poly1305. scrypt key derivation. An
+            authenticated header that rejects tampering. Keyfile second factors.
+            A one-time recovery key. Paranoid mode. A complete security stack
+            with zero dependencies beyond Node.js built-ins for the
+            cryptographic core.
+          </p>
+          <!-- Feature cards rendered by JS -->
+          <div
+            id="features-grid"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          ></div>
+        </div>
+      </section>
+
+      <!-- USE CASES -->
+      <section id="use-cases" class="py-24 px-6">
+        <div class="max-w-6xl mx-auto">
+          <div class="section-tag mb-4">Why ShadowBit?</div>
+          <h2 class="section-heading mb-4">
+            Encryption that travels with you.
+          </h2>
+          <p class="text-sb-muted text-lg mb-6 max-w-3xl">
+            ShadowBit turns any collection of files into a single encrypted
+            container you can email, carry on a USB drive, or share anywhere. No
+            cloud, no account, no subscription. The vault is just a file.
+          </p>
+          <p class="text-sb-muted text-base mb-16 max-w-2xl">
+            Unlike zip encryption (weak and crackable), cloud-only vaults
+            (require trust in a provider), or full-disk tools (not portable),
+            ShadowBit gives you
+            <strong class="text-white">one file that travels anywhere</strong>
+            and opens on any computer that has ShadowBit installed.
+          </p>
+          <!-- Use case cards rendered by JS -->
+          <div
+            id="use-cases-grid"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          ></div>
+        </div>
+      </section>
+
+      <!-- ─── HOW IT WORKS ─────────────────────────────────────────────────── -->
+      <section id="how-it-works" class="py-24 px-6">
+        <div class="max-w-7xl mx-auto">
+          <div class="section-tag mb-4">Workflow</div>
+          <h2 class="section-heading mb-4">Four steps, every time.</h2>
+          <p class="text-sb-muted text-lg mb-16 max-w-2xl">
+            The same simple loop — whether you're using the CLI or the desktop
+            app.
+          </p>
+          <div
+            id="workflow-steps"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          ></div>
+        </div>
+      </section>
+
+      <!-- ─── INSTALLATION ─────────────────────────────────────────────────── -->
+      <section id="install" class="py-24 px-6 section-alt">
+        <div class="max-w-4xl mx-auto">
+          <div class="section-tag mb-4">Installation</div>
+          <h2 class="section-heading mb-4">Get up and running.</h2>
+          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
+            Choose your platform. Requires Node.js 20+.
+          </p>
+
+          <!-- Platform tabs -->
+          <div
+            id="install-tabs"
+            class="install-tabs flex gap-2 mb-8 flex-wrap"
+            role="tablist"
+            aria-label="Install method"
+          ></div>
+
+          <!-- Tab content panels rendered by JS -->
+          <div id="install-panels"></div>
+        </div>
+      </section>
+
+      <!-- ─── QUICK RECIPES ─────────────────────────────────────────────────── -->
+      <section id="workflows" class="py-24 px-6">
+        <div class="max-w-5xl mx-auto">
+          <div class="section-tag mb-4">Recipes</div>
+          <h2 class="section-heading mb-4">Common workflows.</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="recipe-card">
+              <div class="recipe-title">Share a vault</div>
+              <pre
+                class="recipe-code"
+              ><code># Create — you will be prompted for a password
+./shadow-bit create shared --no-recovery
+./shadow-bit open shared
+cp report.pdf &lt;working-folder&gt;/
+./shadow-bit close shared
+
+# Send shared.vault via email/USB
+# Recipient opens with the same password</code></pre>
+            </div>
+
+            <div class="recipe-card">
+              <div class="recipe-title">Recover a forgotten password</div>
+              <pre
+                class="recipe-code"
+              ><code># Use the recovery key printed at creation
+./shadow-bit recover project
+# Recovery key: A7KX9-MP2VQ-8NW4T-…
+# New password: ********
+# ✓ Password reset via recovery key.</code></pre>
+            </div>
+
+            <div class="recipe-card">
+              <div class="recipe-title">Automate with scripts</div>
+              <pre
+                class="recipe-code"
+              ><code># Set the password once, out of band.
+# Prefer the env var over --password: the flag is
+# visible to other users via `ps` and lands in
+# your shell history.
+export SHADOWBIT_PASSWORD="$VAULT_PASS"
+
+./shadow-bit create backup --no-recovery
+./shadow-bit open backup
+rsync -av ~/Documents/ &lt;working-folder&gt;/
+./shadow-bit close backup</code></pre>
+            </div>
+
+            <div class="recipe-card">
+              <div class="recipe-title">Migrate an existing folder</div>
+              <pre class="recipe-code"><code># One command seeds from a folder
+./shadow-bit create secrets \
+  --seed ~/Documents/secrets
+
+# Verify contents
+./shadow-bit open secrets
+ls &lt;working-folder&gt;
+./shadow-bit discard secrets</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Q&A ───────────────────────────────────────────────────────────── -->
+      <section id="faq" class="py-24 px-6">
+        <div class="max-w-5xl mx-auto">
+          <div class="section-tag mb-4">Q&amp;A</div>
+          <h2 class="section-heading mb-4">Questions, answered.</h2>
+          <p class="text-sb-muted text-lg mb-6 max-w-2xl">
+            How-to recipes for the features you can actually use, plus a plain
+            account of what ShadowBit does <em>not</em> do. If a guarantee is
+            not listed here, it does not exist.
+          </p>
+
+          <!-- Search -->
+          <div class="relative mb-6 max-w-sm">
+            <label class="sr-only" for="faq-search">Search questions</label>
+            <svg
+              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sb-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path stroke-linecap="round" d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              id="faq-search"
+              type="search"
+              placeholder="Search questions…"
+              class="cli-search w-full pl-9 pr-4 py-2.5 text-sm"
+              autocomplete="off"
+            />
+          </div>
+
+          <!-- Category chips -->
+          <div
+            id="faq-filters"
+            class="faq-filters flex gap-2 mb-10 flex-wrap"
+            role="group"
+            aria-label="Filter questions by category"
+          ></div>
+
+          <!-- Groups + accordions rendered by JS -->
+          <div id="faq-groups"></div>
+
+          <!-- Empty state -->
+          <p id="faq-empty" hidden class="faq-empty">
+            No questions match that search. Try a shorter word, or clear the box
+            to see all of them.
+          </p>
+        </div>
+      </section>
+
+      <!-- ─── CLI REFERENCE ────────────────────────────────────────────────── -->
+      <section id="cli" class="py-24 px-6 section-alt">
+        <div class="max-w-6xl mx-auto">
+          <div class="section-tag mb-4">CLI Reference</div>
+          <h2 class="section-heading mb-4">Every command, documented.</h2>
+          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
+            Run via <code class="code-inline">./shadow-bit</code> or
+            <code class="code-inline">node dist/cli/index.js</code>. Every
+            command that needs a password prompts for it invisibly by default —
+            pass <code class="code-inline">SHADOWBIT_PASSWORD</code> to
+            automate. <code class="code-inline">--password</code> still works
+            but is deprecated: it exposes the password to other users through
+            <code class="code-inline">ps</code> and to your shell history.
+          </p>
+
+          <!-- Search box -->
+          <div class="relative mb-8 max-w-sm">
+            <label class="sr-only" for="cli-search">Filter commands</label>
+            <svg
+              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sb-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path stroke-linecap="round" d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              id="cli-search"
+              type="search"
+              placeholder="Filter commands…"
+              class="cli-search w-full pl-9 pr-4 py-2.5 text-sm"
+              autocomplete="off"
+            />
+          </div>
+
+          <div id="cli-table" class="cli-table"></div>
+        </div>
+      </section>
+
+      <!-- ─── GUI ──────────────────────────────────────────────────────────── -->
+      <section id="gui" class="py-24 px-6">
+        <div class="max-w-6xl mx-auto">
+          <div class="section-tag mb-4">Desktop App</div>
+          <h2 class="section-heading mb-4">A native GUI for every platform.</h2>
+          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
+            The Electron app shares the same cryptographic core as the CLI. Four
+            tabs cover every workflow — no terminal required.
+          </p>
+
+          <div class="gui-container">
+            <!-- Tab bar -->
+            <div
+              id="gui-tab-bar"
+              class="gui-tab-bar"
+              role="tablist"
+              aria-label="Desktop app screens"
+            ></div>
+            <!-- Tab content -->
+            <div id="gui-content" class="gui-content"></div>
+          </div>
+
+          <!-- Launch command -->
+          <div class="mt-8 flex flex-wrap gap-4 items-center">
+            <div class="terminal-inline flex-1 min-w-0">
+              <span class="term-prompt">$</span>
+              <span class="term-cmd">npm run gui</span>
+              <span class="term-comment"># build + launch Electron</span>
+            </div>
+            <div class="terminal-inline flex-1 min-w-0">
+              <span class="term-prompt">$</span>
+              <span class="term-cmd">npm run gui:dev</span>
+              <span class="term-comment"># launch without rebuilding</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── SECURITY ─────────────────────────────────────────────────────── -->
+      <section id="security" class="py-24 px-6 section-alt">
+        <div class="max-w-6xl mx-auto">
+          <div class="section-tag mb-4">Security Model</div>
+          <h2 class="section-heading mb-4">Designed for real-world threats.</h2>
+          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
+            An internal code review was completed and its findings fixed, each
+            with a regression test. That is a self-review, not an independent
+            security audit — nobody outside the project has assessed this code.
+          </p>
+
+          <!-- Security properties grid rendered by JS -->
+          <div
+            id="security-grid"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-16"
+          ></div>
+
+          <!-- Audit callout -->
+          <div class="audit-callout">
+            <div class="audit-icon">🔍</div>
+            <div class="flex-1">
+              <div class="font-semibold text-white mb-1">
+                Independently reviewed — and not professionally audited
+              </div>
+              <div class="text-sm text-sb-muted">
+                ShadowBit has been through an internal code review whose
+                findings are fixed and covered by an automated suite of 232
+                tests (crypto round-trips, the full keyfile lifecycle, the real
+                CLI as a subprocess, the real desktop app, WCAG 2.2 AA,
+                responsive reflow, and performance budgets). That is a
+                self-review, not an independent security audit — read
+                <code class="code-inline">SECURITY.md</code> and
+                <code class="code-inline">SECURITY_AUDIT.md</code> in the
+                repository for the full report and the threat model.
+              </div>
+            </div>
+          </div>
+
+          <!-- Best-effort notice -->
+          <div class="notice-callout mt-5">
+            <div class="notice-icon">⚠️</div>
+            <div class="text-sm text-sb-muted">
+              <strong class="text-white">Secure erase is best-effort.</strong>
+              On SSDs, APFS, and copy-on-write filesystems, wear-leveling and
+              snapshots may retain old data. For hard guarantees, rely on
+              full-disk encryption (FileVault, BitLocker, LUKS) in addition to
+              the vault's own shred.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── VAULT FORMAT DIAGRAM ─────────────────────────────────────────── -->
+      <section id="format" class="py-24 px-6 relative">
+        <div class="max-w-4xl mx-auto">
+          <div class="section-tag mb-4">What is a Vault?</div>
+          <h2 class="section-heading mb-4">One file holds everything.</h2>
+          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
+            A <code class="code-inline">.vault</code> file is a self-contained
+            encrypted archive. It carries everything needed to decrypt it — KDF
+            parameters, salt, wrapped master key, auth tag — except your
+            password. Email it, put it on USB, attach it to a message. The
+            recipient opens it with ShadowBit and the password you share
+            out-of-band.
+          </p>
+
+          <div class="vault-diagram">
+            <div class="vault-diagram-file">
+              <div class="font-mono text-sm text-sb-cyan mb-4">
+                📄 project.vault
+              </div>
+              <div class="vault-block vault-block-header">
+                <div class="vault-block-label">
+                  HEADER
+                  <span class="text-sb-muted font-normal">(plaintext)</span>
+                </div>
+                <div class="vault-block-items">
+                  <span class="vault-item">magic + version</span>
+                  <span class="vault-item">KDF params + salt</span>
+                  <span class="vault-item">password-wrapped key</span>
+                  <span class="vault-item">recovery-wrapped key</span>
+                  <span class="vault-item">IV + GCM auth tag</span>
+                  <span class="vault-item">cipher · keyfileRequired</span>
+                  <span class="vault-item vault-item-mac"
+                    >headerMac (HMAC-SHA256)</span
+                  >
+                </div>
+              </div>
+              <div class="vault-divider">
+                <div class="vault-divider-line"></div>
+                <span class="vault-divider-label"
+                  >envelope encryption boundary</span
+                >
+                <div class="vault-divider-line"></div>
+              </div>
+              <div class="vault-block vault-block-payload">
+                <div class="vault-block-label">
+                  PAYLOAD
+                  <span class="text-sb-muted font-normal">(ciphertext)</span>
+                </div>
+                <div class="vault-block-items">
+                  <span class="vault-item vault-item-encrypted"
+                    >AES-256-GCM <em>or</em> ChaCha20-Poly1305( deflate( your
+                    files ) )</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="vault-diagram-legend">
+              <div class="legend-item">
+                <div class="legend-dot legend-dot-cyan"></div>
+                <div>
+                  <div class="text-sm font-semibold text-white">
+                    Envelope Encryption
+                  </div>
+                  <div class="text-xs text-sb-muted mt-0.5">
+                    A random 256-bit MEK encrypts your files. The MEK is wrapped
+                    by your password-derived key. Changing the password only
+                    re-wraps the MEK — instant.
+                  </div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot legend-dot-indigo"></div>
+                <div>
+                  <div class="text-sm font-semibold text-white">
+                    Authenticated Encryption
+                  </div>
+                  <div class="text-xs text-sb-muted mt-0.5">
+                    AES-256-GCM or ChaCha20-Poly1305 with a fresh random IV.
+                    Wrong passwords and tampering are detected as decryption
+                    failures.
+                  </div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot legend-dot-amber"></div>
+                <div>
+                  <div class="text-sm font-semibold text-white">
+                    Authenticated Header
+                  </div>
+                  <div class="text-xs text-sb-muted mt-0.5">
+                    The entire header is protected by an HMAC-SHA256
+                    (HKDF-derived from the MEK). Header tampering — inducing
+                    fake KDF params or recovery keys — is detected and rejected
+                    on open.
+                  </div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot legend-dot-green"></div>
+                <div>
+                  <div class="text-sm font-semibold text-white">
+                    Recovery Key
+                  </div>
+                  <div class="text-xs text-sb-muted mt-0.5">
+                    An optional second independent wrapping of the MEK. A
+                    forgotten password isn't permanent lockout.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── ARCHITECTURE ─────────────────────────────────────────────────── -->
+      <section id="architecture" class="py-24 px-6 section-alt">
+        <div class="max-w-5xl mx-auto">
+          <div class="section-tag mb-4">Architecture</div>
+          <h2 class="section-heading mb-4">Clean, layered design.</h2>
+          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
+            The cryptographic core is UI-agnostic. The CLI and Electron GUI are
+            thin frontends over the same engine.
+          </p>
+
+          <div id="arch-tree" class="arch-tree"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ─── FOOTER ────────────────────────────────────────────────────────── -->
+    <footer class="footer py-16 px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-2xl">🔐</span>
+              <span class="font-bold text-lg text-white">ShadowBit</span>
+            </div>
+            <p class="text-sm text-sb-muted leading-relaxed">
+              Encrypted, shareable vault containers. One file. One password.
+              Share anything securely.
+            </p>
+          </div>
+          <div>
+            <div class="footer-heading">Navigation</div>
+            <ul class="footer-links">
+              <li><a href="#features">Features</a></li>
+              <li><a href="#how-it-works">How It Works</a></li>
+              <li><a href="#install">Installation</a></li>
+              <li><a href="#workflows">Recipes</a></li>
+              <li><a href="#faq">Q&amp;A</a></li>
+              <li><a href="#cli">CLI Reference</a></li>
+              <li><a href="#gui">Desktop App</a></li>
+              <li><a href="#security">Security</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="footer-heading">Help</div>
+            <ul class="footer-links">
+              <li><a href="#faq">Common questions</a></li>
+              <li><a href="#faq">How-to recipes</a></li>
+              <li><a href="#faq">Troubleshooting</a></li>
+              <li><a href="#security">Threat Model</a></li>
+              <li><a href="#security">Audit Report</a></li>
+              <li><a href="#format">Vault Format</a></li>
+              <li><a href="#architecture">Architecture</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <div class="text-sm text-sb-muted/60" id="footer-meta"></div>
+          <div class="text-xs text-sb-muted/40 mt-2">
+            Not professionally audited — suitable for personal use and file
+            sharing, not classified data.
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ─── ERROR STATE (shown if data.js fails to load) ────────────────── -->
+    <div
+      id="loadError"
+      hidden
+      class="fixed inset-0 bg-sb-bg flex items-center justify-center z-50"
+    >
+      <div class="text-center p-8">
+        <div class="text-5xl mb-4">⚠️</div>
+        <div class="text-xl font-semibold text-white mb-2">
+          Failed to load app data
+        </div>
+        <div class="text-sb-muted text-sm">
+          Make sure you're opening <code>index.html</code> directly
+          (double-click), not via a URL bar without a server.
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TEMPLATES (cloned by index.js) ──────────────────────────────── -->
+    <template id="feature-card-tpl">
+      <div class="feature-card">
+        <div class="feature-icon" data-field="icon"></div>
+        <div class="feature-title" data-field="title"></div>
+        <div class="feature-desc" data-field="desc"></div>
+      </div>
+    </template>
+
+    <template id="workflow-step-tpl">
+      <div class="workflow-step">
+        <div class="workflow-step-num" data-field="step"></div>
+        <div class="workflow-icon" data-field="icon"></div>
+        <div class="workflow-title" data-field="title"></div>
+        <div class="workflow-desc" data-field="desc"></div>
+        <div class="workflow-code-wrapper">
+          <pre class="workflow-code"><code data-field="code"></code></pre>
+        </div>
+      </div>
+    </template>
+
+    <template id="install-step-tpl">
+      <div class="install-step">
+        <div class="install-step-title" data-field="title"></div>
+        <div class="install-step-code-wrapper">
+          <button type="button" class="copy-btn" aria-label="Copy code">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
+            </svg>
+          </button>
+          <pre class="install-code"><code data-field="code"></code></pre>
+        </div>
+      </div>
+    </template>
+
+    <template id="cli-row-tpl">
+      <div class="cli-row">
+        <div class="cli-row-header">
+          <div class="cli-row-cmd">
+            <span class="cli-prompt">$</span>
+            <span class="cli-cmd-name" data-field="cmd"></span>
+          </div>
+          <button
+            type="button"
+            class="copy-btn copy-btn-sm"
+            aria-label="Copy example"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="cli-row-desc" data-field="desc"></div>
+        <div class="cli-row-flags" data-field="flags-wrapper">
+          <span class="cli-flags-label">Flags:</span>
+          <code class="cli-flags-value" data-field="flags"></code>
+        </div>
+        <div class="cli-row-example">
+          <pre><code data-field="example"></code></pre>
+        </div>
+      </div>
+    </template>
+
+    <template id="security-card-tpl">
+      <div class="security-card">
+        <div class="security-card-icon" data-field="icon"></div>
+        <div class="security-card-body">
+          <div class="security-card-label" data-field="label"></div>
+          <div class="security-card-value" data-field="value"></div>
+          <div class="security-card-detail" data-field="detail"></div>
+        </div>
+      </div>
+    </template>
+
+    <template id="use-case-card-tpl">
+      <div class="feature-card">
+        <div class="feature-icon" data-field="icon"></div>
+        <div class="feature-title" data-field="title"></div>
+        <div class="feature-desc" data-field="desc"></div>
+        <div
+          class="text-xs text-sb-cyan mt-3 font-semibold"
+          data-field="audience"
+        ></div>
+      </div>
+    </template>
+
+    <template id="arch-module-tpl">
+      <div class="arch-module">
+        <div class="arch-module-header">
+          <span class="arch-module-path font-mono" data-field="path"></span>
+          <span class="arch-module-desc" data-field="desc"></span>
+        </div>
+        <div class="arch-module-files" data-field="files-container"></div>
+      </div>
+    </template>
+
+    <template id="arch-file-tpl">
+      <div class="arch-file">
+        <span class="arch-file-name font-mono" data-field="name"></span>
+        <span class="arch-file-desc" data-field="desc"></span>
+      </div>
+    </template>
+
+    <template id="faq-filter-tpl">
+      <button type="button" class="faq-filter-btn">
+        <span class="faq-filter-label" data-field="label"></span>
+        <span class="faq-filter-count" data-field="count"></span>
+      </button>
+    </template>
+
+    <template id="faq-group-tpl">
+      <div class="faq-group">
+        <h3 class="faq-group-title">
+          <span
+            class="faq-group-icon"
+            data-field="icon"
+            aria-hidden="true"
+          ></span>
+          <span data-field="label"></span>
+        </h3>
+        <p class="faq-group-blurb" data-field="blurb"></p>
+        <div class="faq-items" data-field="items-container"></div>
+      </div>
+    </template>
+
+    <!-- One question. A <details>/<summary> accordion is used deliberately: it is
+         keyboard-operable, exposes its expanded state to assistive technology,
+         and needs no JS to open — the wiring below only adds search filtering. -->
+    <template id="faq-item-tpl">
+      <details class="faq-item">
+        <summary class="faq-q">
+          <span class="faq-q-text" data-field="q"></span>
+          <span class="faq-marker" aria-hidden="true"></span>
+        </summary>
+        <div class="faq-a">
+          <div data-field="paras-container"></div>
+          <div class="faq-code-wrapper" data-field="code-wrapper">
+            <button
+              type="button"
+              class="copy-btn faq-copy-btn"
+              aria-label="Copy code"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                />
+              </svg>
+            </button>
+            <pre class="faq-code"><code data-field="code"></code></pre>
+          </div>
+          <div class="faq-note" data-field="note">
+            <span
+              class="faq-note-icon"
+              aria-hidden="true"
+              data-field="note-icon"
+            ></span>
+            <span data-field="note-text"></span>
+          </div>
+        </div>
+      </details>
+    </template>
+
+    <!-- Scripts — load order: data → index -->
+    <script src="data.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>

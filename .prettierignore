@@ -1,0 +1,14 @@
+# Build output. `npm run format` must never rewrite compiled or packaged
+# artifacts — that produces a diff of generated code that reviewers cannot read
+# and that the next `npm run build` immediately reverts.
+dist/
+release/
+build/
+node_modules/
+package-lock.json
+
+# Signing inputs are hand-maintained, not build output — keep them in scope.
+
+# The NFR harness serves the renderer from source and asserts on its exact
+# bytes; reformatting it would invalidate nothing but adds churn.
+src/gui/renderer/

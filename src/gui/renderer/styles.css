@@ -1,0 +1,867 @@
+/* ── Design tokens (dark theme — default) ─────────────────────────── */
+:root {
+  --bg: #0f1117;
+  --panel: #171a23;
+  --card: #1e222e;
+  --border: #2a2f3d;
+  --text: #e6e8ee;
+  --muted: #9ba1b3; /* lightened from #8b91a3 for WCAG AA contrast */
+  --accent: #5b8cff;
+  --accent-hover: #6f9bff;
+  --danger: #ff5b6e;
+  --ok: #43c98b;
+  /* Solid fills for buttons. These are deliberately darker than --accent:
+     --accent is used for text and 1px borders where a light tint is fine, but
+     a filled button needs 4.5:1 against white label text (WCAG 1.4.3).
+     Verified: 5.56:1 and 5.67:1 respectively. */
+  --accent-solid: #3560d4;
+  --accent-solid-hover: #2b54bd;
+  --danger-solid: #c81e3a;
+  --danger-solid-hover: #d42a45;
+  --warn: #f5a623;
+  /* Password-strength ramp (WCAG 1.4.3 — all ≥4.5:1 on --card #1e222e).
+     One ramp per theme, used for BOTH the bar fill and the label text, so a
+     colour can never be legible as a bar and illegible as a label. */
+  --strength-1: #ff5b6e; /* very weak */
+  --strength-2: #f5a623; /* weak      */
+  --strength-3: #eac100; /* fair      */
+  --strength-4: #43c98b; /* strong    */
+  --strength-5: #43c98b; /* very strong */
+}
+
+/* ── Light theme ──────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --border: #d1d5de;
+  --text: #1a1d26;
+  --muted: #5a6070;
+  --accent: #3b6de0;
+  --accent-hover: #2d5bc9;
+  --danger: #d93548;
+  --ok: #1d8a5e;
+  --accent-solid: #3b6de0;
+  --accent-solid-hover: #2d5bc9;
+  --danger-solid: #d93548;
+  --danger-solid-hover: #c02739;
+  --warn: #8a5a00;
+  /* Light-theme strength ramp. The vivid ambers used in dark mode (#f5a623,
+     #eac100) sit at ~2:1 on white and failed WCAG 1.4.3 as label text, so the
+     whole ramp is darker here. Measured on #ffffff:
+     1 → 6.5:1, 2 → 5.2:1, 3 → 5.0:1, 4 → 5.6:1, 5 → 6.5:1. */
+  --strength-1: #b3122b; /* very weak */
+  --strength-2: #a05a00; /* weak      */
+  --strength-3: #7a6000; /* fair      */
+  --strength-4: #17764f; /* strong    */
+  --strength-5: #0f6b46; /* very strong */
+}
+
+/* ── System preference fallback (when theme="system") ─────────────── */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --card: #ffffff;
+    --border: #d1d5de;
+    --text: #1a1d26;
+    --muted: #5a6070;
+    --accent: #3b6de0;
+    --accent-hover: #2d5bc9;
+    --danger: #d93548;
+    --ok: #1d8a5e;
+    --accent-solid: #3b6de0;
+    --accent-solid-hover: #2d5bc9;
+    --danger-solid: #d93548;
+    --danger-solid-hover: #c02739;
+    --warn: #8a5a00;
+    /* Keep in step with [data-theme="light"] above — the system-theme path must
+       not reintroduce the sub-4.5:1 ambers. */
+    --strength-1: #b3122b;
+    --strength-2: #a05a00;
+    --strength-3: #7a6000;
+    --strength-4: #17764f;
+    --strength-5: #0f6b46;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Topbar ───────────────────────────────────────────────────────── */
+.topbar {
+  padding: 18px 24px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+.logo {
+  font-size: 34px;
+}
+.brand h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.tagline {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-bottom: 8px;
+  align-self: flex-start;
+  padding-top: 4px;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  line-height: 1;
+}
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 16px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 100%; /* push tabs to their own row */
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tab:hover {
+  color: var(--text);
+}
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Main content ─────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px;
+}
+
+.panel {
+  display: none;
+  max-width: min(620px, 100%);
+  margin: 0 auto;
+}
+.panel.active {
+  display: block;
+}
+.panel h2 {
+  margin-top: 0;
+}
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: -6px;
+}
+code {
+  background: var(--card);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ── Form fields ──────────────────────────────────────────────────── */
+.field {
+  margin: 16px 0;
+}
+.field label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+}
+.row input {
+  flex: 1;
+  min-width: 0;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="search"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.15);
+}
+
+/* ── Password show/hide toggle ───────────────────────────────────── */
+.pw-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pw-wrapper input {
+  flex: 1;
+  padding-right: 40px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.pw-toggle:hover {
+  color: var(--text);
+}
+
+/* ── Checkbox ─────────────────────────────────────────────────────── */
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  margin: 8px 0 20px;
+  cursor: pointer;
+}
+.checkbox input {
+  /* 20px native control. Alone this is under the 24px WCAG 2.2 2.5.8 floor,
+     so the vertical gap between rows (8px top + 20px bottom margin) carries
+     the "spacing" exception: a 24px circle centred on each box must not
+     intersect another target's circle. See e2e/nfr.a11y.test.ts, which
+     asserts against axe's target-size rule rather than a raw bbox. */
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+button {
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+}
+.primary {
+  background: var(--accent-solid);
+  color: #fff;
+  border: none;
+}
+.primary:hover {
+  background: var(--accent-solid-hover);
+}
+.secondary {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.secondary:hover {
+  border-color: var(--accent);
+}
+.danger {
+  background: var(--danger-solid);
+  color: #fff;
+  border: none;
+}
+.danger:hover {
+  background: var(--danger-solid-hover);
+}
+.danger-card {
+  border-color: var(--danger) !important;
+}
+
+/* Disabled buttons */
+button:disabled,
+button[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Focus-visible (keyboard navigation) ─────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.tab:focus-visible {
+  outline-offset: -2px;
+}
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(91, 140, 255, 0.15);
+}
+
+/* ── Dropzone ─────────────────────────────────────────────────────── */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 24px 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 10px;
+  transition: all 0.15s;
+  cursor: default;
+}
+.dropzone .dropzone-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 6px;
+}
+.dropzone.drag {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(91, 140, 255, 0.06);
+}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 18px 0;
+}
+.card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.card input,
+.card .pw-wrapper {
+  margin-bottom: 10px;
+}
+.card .pw-wrapper:last-of-type {
+  margin-bottom: 10px;
+}
+
+/* ── Info panel ───────────────────────────────────────────────────── */
+.info-out {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── Sessions ─────────────────────────────────────────────────────── */
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+.session {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.session .path {
+  font-weight: 600;
+  word-break: break-all;
+}
+.session .wd {
+  color: var(--muted);
+  font-size: 12px;
+  word-break: break-all;
+  margin: 6px 0 12px;
+}
+.session .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.session input,
+.session .pw-wrapper {
+  margin-bottom: 8px;
+}
+
+/* ── File tree browser ────────────────────────────────────────────── */
+.file-tree {
+  font-size: 13px;
+  margin: 8px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.file-tree-empty {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.tree-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  gap: 6px;
+  cursor: default;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background 0.12s;
+}
+.tree-item:last-child {
+  border-bottom: none;
+}
+.tree-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.tree-item.dir {
+  cursor: pointer;
+}
+.tree-item .tree-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.tree-item .tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tree-item .tree-size {
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.tree-item .tree-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+/* Reveal on hover AND on keyboard focus. Hover-only hid the row from everyone
+   else: a keyboard user could Tab into buttons they could not see, and
+   touch/trackpad users had no hover at all. */
+.tree-item:hover .tree-actions,
+.tree-item:focus-within .tree-actions {
+  opacity: 1;
+}
+.tree-actions button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  /* 24x24 minimum (WCAG 2.2 2.5.8). These were 15x18 / 12x18. */
+  min-width: 24px;
+  min-height: 24px;
+  padding: 2px 4px;
+  font-size: 12px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tree-actions button:hover {
+  background: var(--border);
+  color: var(--text);
+}
+.tree-indent {
+  display: flex;
+  flex-direction: column;
+  padding-left: 16px;
+}
+.tree-toggle-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 10px;
+  flex-shrink: 0;
+  /* The disclosure arrow was 5x11 — far below the 24x24 floor and impossible to
+     hit. Sized to match the action buttons beside it. */
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.tree-toggle-btn:hover {
+  color: var(--text);
+}
+
+/* ── Strength bar ─────────────────────────────────────────────────── */
+.strength-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  margin: 6px 0 2px;
+  overflow: hidden;
+}
+.strength-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  transition:
+    width 0.25s ease,
+    background-color 0.25s ease;
+}
+.strength-label {
+  font-size: 12px;
+  margin: 0 0 10px;
+  min-height: 1.2em;
+  color: var(--muted);
+}
+
+/* ── Recent vaults ────────────────────────────────────────────────── */
+.recent-heading {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.recent-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.recent-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  overflow: hidden;
+}
+.recent-item:hover {
+  border-color: var(--accent);
+}
+.recent-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-dir {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Utilities ────────────────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  max-width: min(80%, calc(100vw - 48px));
+  z-index: 100;
+  /* A fixed overlay at the bottom centre sat on top of the primary action
+     button on short windows and swallowed its clicks. Never intercept
+     pointer events for the transient messages... */
+  pointer-events: none;
+  cursor: default;
+}
+/* ...except a persistent error, which the user has to be able to dismiss by
+   clicking it, and which needs a visible affordance for that to be fair. */
+.toast[data-persistent] {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.toast[data-persistent]:hover {
+  border-color: var(--danger);
+}
+.toast:focus-visible {
+  pointer-events: auto;
+}
+.toast.ok {
+  border-color: var(--ok);
+}
+.toast.err {
+  border-color: var(--danger);
+}
+.toast.warn {
+  border-color: var(--warn);
+}
+
+/* ── Invalid fields ─────────────────────────────────────────────────── */
+/* Paired with aria-invalid, so this is the visual half of the same state. */
+input[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+/* ── Modal ────────────────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 460px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-box h3 {
+  margin-top: 0;
+}
+.modal-box p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.rec-key {
+  background: var(--bg);
+  border: 1px dashed var(--accent);
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-align: center;
+  word-break: break-all;
+  color: var(--ok);
+}
+.modal-box .row {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.modal-ack {
+  margin: 12px 0 4px;
+  color: var(--text);
+}
+
+/* ── Settings modal specifics ─────────────────────────────────────── */
+.settings-select {
+  margin-top: 6px;
+}
+
+/* ── Welcome modal specifics ──────────────────────────────────────── */
+.welcome-box {
+  max-width: 380px;
+}
+.welcome-steps {
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 2;
+  margin: 0;
+}
+.welcome-steps strong {
+  color: var(--text);
+}
+
+/* ── Loading overlay ──────────────────────────────────────────────── */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+.loading-label {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────
+   Respect the OS "reduce motion" setting. The loading spinner is an infinite
+   rotation and the hover/strength transitions are decorative, so none of it is
+   load-bearing feedback: the spinner becomes a static ring and transitions
+   collapse to near-zero. Without this block the app is the only thing on screen
+   that refuses to stop moving for a user who has asked everything else to.
+
+   `animation: none` only stops the keyframes — it does not remove the element
+   from the box tree — so the spinner keeps rendering as a static ring. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    /* Stop it outright rather than slowing it down: a still-animating element is
+       still animation, and `animation: none` does not hide the element (it only
+       stops the keyframes), so the ring keeps rendering as a static progress
+       indicator. */
+    animation: none;
+    border-top-color: var(--accent);
+  }
+  .strength-fill,
+  .dropzone,
+  .tree-item,
+  .tree-item .tree-actions,
+  .recent-item {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* ── Recovery-key ack checkbox ────────────────────────────────────── */
+.modal-ack {
+  margin: 12px 0 4px;
+  color: var(--text);
+}
+
+/* ── Responsive breakpoints ───────────────────────────────────────── */
+@media (max-width: 720px) {
+  main {
+    padding: 16px;
+  }
+  .topbar {
+    padding: 12px 16px 0;
+  }
+  .brand h1 {
+    font-size: 16px;
+  }
+  .tagline {
+    display: none;
+  }
+  .tab {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .card {
+    padding: 12px;
+  }
+  .session .actions {
+    flex-direction: column;
+  }
+  .session .actions button {
+    width: 100%;
+  }
+  .modal-box {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tab {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+  .row {
+    flex-direction: column;
+  }
+  .row input {
+    width: 100%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .panel {
+    max-width: 780px;
+  }
+}

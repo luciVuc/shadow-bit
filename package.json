@@ -1,0 +1,134 @@
+{
+  "name": "shadow-bit",
+  "version": "1.0.0",
+  "description": "Stealth containers. Enhanced privacy. Total control. (CLI + Electron GUI)",
+  "author": {
+    "name": "Lucian Vuc",
+    "email": "lucian.vuc@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "encryption",
+    "vault",
+    "shadowbit",
+    "stealth",
+    "aes-256-gcm",
+    "scrypt",
+    "crypto",
+    "electron",
+    "cli",
+    "security"
+  ],
+  "main": "dist/gui/main.js",
+  "bin": {
+    "shadow-bit": "dist/cli/index.js"
+  },
+  "scripts": {
+    "prebuild": "npm run icons",
+    "build": "node ./node_modules/typescript/bin/tsc && npm run copy-assets",
+    "copy-assets": "node scripts/copy-assets.js",
+    "test": "node --import tsx --test src/test/*.test.ts",
+    "test:gui": "node --import tsx --test e2e/smoke.test.ts",
+    "test:cli-e2e": "node --import tsx --test e2e/cli.test.ts",
+    "test:a11y": "node --import tsx --test e2e/nfr.a11y.test.ts",
+    "test:responsive": "node --import tsx --test e2e/nfr.responsive.test.ts",
+    "test:perf": "node --import tsx --test e2e/nfr.performance.test.ts",
+    "test:site": "node --import tsx --test e2e/nfr.site.test.ts",
+    "test:nfr": "npm run test:a11y && npm run test:responsive && npm run test:perf && npm run test:site",
+    "test:packaged": "node scripts/check-packaged.mjs",
+    "verify": "npm run build && npm test && npm run test:cli-e2e && npm run test:gui && npm run test:nfr",
+    "icons": "bash scripts/make-icons.sh",
+    "cli": "tsx src/cli/index.ts",
+    "gui": "npm run build && electron dist/gui/main.js",
+    "gui:dev": "npm run prebuild && electron dist/gui/main.js",
+    "clean": "rm -rf dist release",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm run build",
+    "package": "npm run build && electron-builder",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:win": "npm run build && electron-builder --win",
+    "package:linux": "npm run build && electron-builder --linux",
+    "package:dir": "npm run build && electron-builder --dir"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "axe-core": "^4.14.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "playwright": "^1.63.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "app.shadowbit.desktop",
+    "productName": "ShadowBit",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "extraMetadata": {
+      "main": "dist/gui/main.js"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
+    },
+    "fileAssociations": [
+      {
+        "ext": "vault",
+        "name": "ShadowBit Vault",
+        "description": "Encrypted vault container",
+        "mimeType": "application/x-shadowbit-vault",
+        "role": "Viewer"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lucianvuc/shadow-bit.git"
+  },
+  "homepage": "https://shadowbit.app",
+  "bugs": {
+    "url": "https://github.com/lucianvuc/shadow-bit/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

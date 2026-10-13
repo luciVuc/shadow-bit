@@ -1,0 +1,12 @@
+#!/bin/bash
+# Launcher for the ShadowBit CLI.
+# Prefers the locally installed tsx (no auto-install), then the built CLI,
+# and only falls back to npx tsx (which may download tsx on first run).
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -x "$DIR/node_modules/.bin/tsx" ]; then
+  exec "$DIR/node_modules/.bin/tsx" "$DIR/src/cli/index.ts" "$@"
+elif [ -f "$DIR/dist/cli/index.js" ]; then
+  exec node "$DIR/dist/cli/index.js" "$@"
+else
+  exec npx tsx "$DIR/src/cli/index.ts" "$@"
+fi

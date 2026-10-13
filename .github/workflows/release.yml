@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# Only one release build at a time. Without this, two pushes close together
+# race to upload artifacts into the same draft release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Least privilege by default; only the jobs that publish need write access.
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build & test before release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      # The CLI E2E suite carries the version-consistency assertions: they are
+      # the tripwire that tells you package.json and the version literals baked
+      # into docs/ have drifted. Skipping them here is how a release ships a site
+      # advertising the wrong build.
+      - name: Run CLI end-to-end tests
+        run: npm run test:cli-e2e
+
+  # GUI smoke tests gate the release too. They previously ran only on PRs,
+  # which let a stale assertion (hardcoded container version) survive all the
+  # way to a tag push.
+  gui-smoke:
+    name: GUI smoke tests before release
+    runs-on: macos-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run GUI smoke tests
+        run: npm run test:gui
+        env:
+          SHADOWBIT_E2E_TEST: "1"
+        timeout-minutes: 5
+      # The NFR suites (WCAG 2.2 AA, responsive, asset budget, docs
+      # self-containment) only need headless Chromium, and run in the GUI job
+      # because that is where Playwright is installed. They gate packaging too:
+      # shipping an accessibility regression or a docs page that reaches for a
+      # CDN is exactly the kind of defect a release should not carry.
+      - name: Run NFR suites (a11y, responsive, perf, site)
+        run: npm run test:nfr
+        timeout-minutes: 20
+
+  package:
+    name: Package (${{ matrix.os }})
+    needs: [build-test, gui-smoke]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+            artifact: "release/**/*.{dmg,zip}"
+          - os: windows-latest
+            target: win
+            artifact: "release/**/*.exe"
+          - os: ubuntu-latest
+            target: linux
+            artifact: "release/**/*.{AppImage,deb}"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Package
+        run: npx electron-builder --${{ matrix.target }} --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code signing. These are what turn a Gatekeeper-blocked download into
+          # an installable app; without them the macOS artifact is unsigned and
+          # macOS refuses to open it ("app is damaged"), which for a security
+          # product is indistinguishable from malware.
+          #
+          # Set these repository secrets before the first tagged release:
+          #   CSC_LINK               base64 of the Developer ID "Application" .p12
+          #   CSC_KEY_PASSWORD       password for that .p12
+          #   APPLE_ID               Apple ID used for notarization
+          #   APPLE_APP_SPECIFIC_PASSWORD  app-specific password for that Apple ID
+          #   APPLE_TEAM_ID          Developer Team ID
+          #   WIN_CSC_LINK           base64 of the code-signing .pfx
+          #   WIN_CSC_KEY_PASSWORD   password for that .pfx
+          #
+          # electron-builder notarizes automatically once APPLE_ID and
+          # APPLE_TEAM_ID are present, and `mac.hardenedRuntime` plus
+          # resources/entitlements.mac.plist are already configured for it.
+          # (The entitlements live in resources/, not build/ — build/ is
+          # gitignored as generated output, so a plist there would never be
+          # committed and the signed build would fail to find it.)
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CERT_PFX }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: release/
+          retention-days: 7
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts/
+          merge-multiple: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/**/*
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for ShadowBit.
+
+  electron-builder applies this file when it signs the macOS build (set CSC_LINK
+  / CSC_KEY_PASSWORD in the release workflow). It is ignored when the build is
+  unsigned, so leaving it in place does not break a local `npm run package:mac`.
+
+  Electron needs the JIT and unsigned-memory entitlements to run V8 at all, so
+  those three are not optional. The remainder is the minimum the app actually
+  uses — it does NOT need camera, microphone, location, contacts, or
+  address-book, and the sandbox stays off because the whole job is to read and
+  write arbitrary user-chosen paths inside and outside its sandbox container.
+
+  Keep this list as small as possible: every entitlement is permanent user-facing
+  permission on macOS, and for a security product an unexplained entry is a
+  reason to distrust the build.
+-->
+<plist version="1.0">
+  <dict>
+    <!-- Required by V8 / Electron. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <!-- No App Sandbox: ShadowBit opens user-chosen vault files and writes
+         decrypted working folders under $TMPDIR, which the sandbox would
+         forbid. Access to user-selected files is still user-mediated. -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+
+    <!-- Explicitly NOT requested: no network client/server (the app is fully
+         offline), no camera, microphone, location, contacts, calendars,
+         reminders, photos, address book, or Apple Events. -->
+  </dict>
+</plist>

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      # Cheap, and the tree is prettier-clean today. Catches an editor or an
+      # agent reformatting a file so the next review diff is signal, not noise.
+      - name: Check formatting
+        run: npm run format:check
+      - name: Type-check & build
+        run: npm run build
+      - name: Run core + CLI tests
+        run: npm test
+      - name: Run CLI end-to-end tests
+        run: npm run test:cli-e2e
+
+  gui-smoke:
+    name: GUI + NFR tests (Electron + Playwright)
+    runs-on: macos-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run GUI smoke tests
+        run: npm run test:gui
+        env:
+          SHADOWBIT_E2E_TEST: "1"
+        timeout-minutes: 5
+      - name: Run accessibility NFR tests (WCAG 2.2 AA)
+        run: npm run test:a11y
+        timeout-minutes: 10
+      - name: Run responsive NFR tests
+        run: npm run test:responsive
+        timeout-minutes: 10
+      - name: Run performance NFR tests
+        run: npm run test:perf
+        timeout-minutes: 10

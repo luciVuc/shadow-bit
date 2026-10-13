@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      Strict CSP. Every directive is set explicitly rather than inherited from
+      `default-src`, and the ones that can be tightened are: `object-src 'none'`
+      and `frame-src 'none'` cut off plugin/frame vectors, and `base-uri 'none'`
+      plus `form-action 'none'` stop an injected <base> or <form> from
+      re-pointing relative URLs.
+
+      `frame-ancestors` is deliberately absent: browsers ignore it in a <meta>
+      policy, and emitting it there would look like clickjacking protection
+      without providing any. There is no server to send the header from, and
+      the window loads a local file, so there is nothing to frame it from either.
+
+      `style-src` allows 'unsafe-inline' because the markup carries inline
+      `style` attributes. No remote origin is reachable, so the exposure is
+      limited to CSS-based exfiltration of already-local content.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>ShadowBit</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"> 🗝️ </span>
+        <div>
+          <h1>ShadowBit</h1>
+          <p class="tagline">
+            Stealth containers. Enhanced privacy. Total control.
+          </p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button
+          class="icon-btn"
+          id="theme-toggle"
+          title="Toggle theme"
+          aria-label="Toggle light/dark theme"
+        >
+          🌙
+        </button>
+        <button
+          class="icon-btn"
+          id="settings-btn"
+          title="Settings"
+          aria-label="Open settings"
+        >
+          ⚙️
+        </button>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Vault operations">
+        <button
+          class="tab active"
+          data-tab="open"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-open"
+          id="tab-open"
+          tabindex="0"
+        >
+          Open
+        </button>
+        <button
+          class="tab"
+          data-tab="create"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-create"
+          id="tab-create"
+          tabindex="-1"
+        >
+          Create
+        </button>
+        <button
+          class="tab"
+          data-tab="manage"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-manage"
+          id="tab-manage"
+          tabindex="-1"
+        >
+          Manage
+        </button>
+        <button
+          class="tab"
+          data-tab="sessions"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-sessions"
+          id="tab-sessions"
+          tabindex="-1"
+        >
+          Open Vaults
+        </button>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <!-- OPEN -->
+      <section
+        class="panel active"
+        id="panel-open"
+        role="tabpanel"
+        aria-labelledby="tab-open"
+        tabindex="0"
+      >
+        <h2>Open a vault</h2>
+        <p class="hint">
+          Decrypts the vault to a temporary folder you can browse in your file
+          manager.
+        </p>
+        <div class="field">
+          <label for="open-path">Vault file</label>
+          <div class="row">
+            <input
+              id="open-path"
+              type="text"
+              placeholder="Choose a .vault file…"
+              readonly
+              aria-label="Vault file path"
+            />
+            <button
+              class="secondary"
+              id="open-browse"
+              aria-label="Browse for vault file"
+            >
+              Browse…
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent vaults (hidden until populated) -->
+        <div id="recent-section" class="hidden" aria-live="polite">
+          <p class="recent-heading" id="recent-heading">Recent</p>
+          <ul
+            id="recent-list"
+            class="recent-list"
+            aria-labelledby="recent-heading"
+          ></ul>
+        </div>
+
+        <div class="field">
+          <label for="open-password">Password</label>
+          <div class="pw-wrapper">
+            <input
+              id="open-password"
+              type="password"
+              placeholder="Password"
+              aria-label="Vault password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="open-password"
+              aria-label="Show password"
+            >
+              👁
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="open-keyfile" style="font-size: 0.85em"
+            >Keyfile (if required)</label
+          >
+          <div class="row">
+            <input
+              id="open-keyfile"
+              type="text"
+              readonly
+              placeholder="No keyfile selected"
+            />
+            <button id="open-keyfile-browse" class="secondary" type="button">
+              Browse
+            </button>
+            <button id="open-keyfile-clear" class="secondary" type="button">
+              Clear
+            </button>
+          </div>
+        </div>
+        <button class="primary" id="open-go">Open Vault</button>
+      </section>
+
+      <!-- CREATE -->
+      <section
+        class="panel"
+        id="panel-create"
+        role="tabpanel"
+        aria-labelledby="tab-create"
+        tabindex="0"
+      >
+        <h2>Create a new vault</h2>
+        <p class="hint">
+          Produces a single encrypted <code>.vault</code> file you can email or
+          share.
+        </p>
+        <div class="field">
+          <label for="create-path">Save vault as</label>
+          <div class="row">
+            <input
+              id="create-path"
+              type="text"
+              placeholder="Choose where to save…"
+              readonly
+              aria-label="Save vault file path"
+            />
+            <button
+              class="secondary"
+              id="create-browse"
+              aria-label="Browse save location"
+            >
+              Browse…
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="create-password">Password</label>
+          <div class="pw-wrapper">
+            <input
+              id="create-password"
+              type="password"
+              placeholder="Password"
+              aria-label="New vault password"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="create-password"
+              aria-label="Show password"
+            >
+              👁
+            </button>
+          </div>
+          <div
+            class="strength-bar"
+            role="progressbar"
+            aria-label="Password strength"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div class="strength-fill" id="create-strength-fill"></div>
+          </div>
+          <p
+            class="strength-label"
+            id="create-strength-label"
+            aria-live="polite"
+          ></p>
+        </div>
+        <div class="field">
+          <label for="create-password2">Confirm password</label>
+          <div class="pw-wrapper">
+            <input
+              id="create-password2"
+              type="password"
+              placeholder="Confirm password"
+              aria-label="Confirm new vault password"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="create-password2"
+              aria-label="Show password"
+            >
+              👁
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="create-seed">Seed from folder (optional)</label>
+          <div class="row">
+            <input
+              id="create-seed"
+              type="text"
+              placeholder="(empty vault)"
+              readonly
+              aria-label="Seed folder path (optional)"
+            />
+            <button
+              class="secondary"
+              id="create-seed-browse"
+              aria-label="Browse seed folder"
+            >
+              Browse…
+            </button>
+          </div>
+        </div>
+        <label class="checkbox">
+          <input
+            id="create-recovery"
+            type="checkbox"
+            checked
+            aria-describedby="recovery-hint"
+          />
+          Generate a recovery key (recommended)
+        </label>
+        <p
+          class="hint"
+          id="recovery-hint"
+          style="margin-top: -10px; margin-bottom: 12px"
+        >
+          Allows password recovery if forgotten. Shown once and never stored.
+        </p>
+
+        <!-- Advanced creation options -->
+        <details class="advanced-opts" style="margin-bottom: 12px">
+          <summary
+            style="cursor: pointer; font-size: 0.9em; color: var(--muted)"
+          >
+            Advanced options
+          </summary>
+          <div
+            style="
+              margin-top: 8px;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            "
+          >
+            <div>
+              <label for="create-cipher" style="font-size: 0.85em"
+                >Encryption algorithm</label
+              >
+              <select
+                id="create-cipher"
+                style="
+                  width: 100%;
+                  padding: 6px;
+                  border-radius: 4px;
+                  border: 1px solid var(--border, #444);
+                  background: var(--bg-input, #2a2a2a);
+                  color: var(--text, #eee);
+                "
+              >
+                <option value="aes-256-gcm" selected>
+                  AES-256-GCM (default)
+                </option>
+                <option value="chacha20-poly1305">ChaCha20-Poly1305</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="create-keyfile" style="font-size: 0.85em"
+                >Keyfile (optional second factor)</label
+              >
+              <div class="row">
+                <input
+                  id="create-keyfile"
+                  type="text"
+                  readonly
+                  placeholder="No keyfile selected"
+                />
+                <button
+                  id="create-keyfile-browse"
+                  class="secondary"
+                  type="button"
+                >
+                  Browse
+                </button>
+                <button
+                  id="create-keyfile-clear"
+                  class="secondary"
+                  type="button"
+                >
+                  Clear
+                </button>
+              </div>
+              <p class="hint" style="margin-top: 2px; font-size: 0.8em">
+                If set, this file will be required (along with the password) for
+                every future open.
+              </p>
+            </div>
+            <label class="checkbox">
+              <input id="create-paranoid" type="checkbox" />
+              Paranoid mode — strip timestamps &amp; metadata from the vault
+            </label>
+          </div>
+        </details>
+
+        <button class="primary" id="create-go">Create Vault</button>
+      </section>
+
+      <!-- MANAGE -->
+      <section
+        class="panel"
+        id="panel-manage"
+        role="tabpanel"
+        aria-labelledby="tab-manage"
+        tabindex="0"
+      >
+        <h2>Manage a vault</h2>
+        <div class="field">
+          <label for="manage-path">Vault file</label>
+          <div class="row">
+            <input
+              id="manage-path"
+              type="text"
+              placeholder="Choose a .vault file…"
+              readonly
+              aria-label="Vault file path"
+            />
+            <button
+              class="secondary"
+              id="manage-browse"
+              aria-label="Browse for vault"
+            >
+              Browse…
+            </button>
+          </div>
+        </div>
+        <button
+          class="secondary"
+          id="manage-info"
+          aria-controls="manage-info-out"
+        >
+          Show Info
+        </button>
+        <pre
+          id="manage-info-out"
+          class="info-out hidden"
+          aria-live="polite"
+          role="region"
+          aria-label="Vault information"
+        ></pre>
+
+        <div class="card">
+          <h3>Change password</h3>
+          <div class="pw-wrapper">
+            <input
+              id="cp-old"
+              type="password"
+              placeholder="Current password"
+              aria-label="Current password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="cp-old"
+              aria-label="Show current password"
+            >
+              👁
+            </button>
+          </div>
+          <div class="pw-wrapper">
+            <input
+              id="cp-new"
+              type="password"
+              placeholder="New password"
+              aria-label="New password"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="cp-new"
+              aria-label="Show new password"
+            >
+              👁
+            </button>
+          </div>
+          <div
+            class="strength-bar"
+            role="progressbar"
+            aria-label="New password strength"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div class="strength-fill" id="cp-strength-fill"></div>
+          </div>
+          <p
+            class="strength-label"
+            id="cp-strength-label"
+            aria-live="polite"
+          ></p>
+          <div class="pw-wrapper">
+            <input
+              id="cp-new2"
+              type="password"
+              placeholder="Confirm new password"
+              aria-label="Confirm new password"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="cp-new2"
+              aria-label="Show confirm password"
+            >
+              👁
+            </button>
+          </div>
+          <div class="field">
+            <label for="cp-keyfile" style="font-size: 0.85em"
+              >Keyfile (if required)</label
+            >
+            <div class="row">
+              <input
+                id="cp-keyfile"
+                type="text"
+                readonly
+                placeholder="No keyfile selected"
+              />
+              <button id="cp-keyfile-browse" class="secondary" type="button">
+                Browse
+              </button>
+              <button id="cp-keyfile-clear" class="secondary" type="button">
+                Clear
+              </button>
+            </div>
+          </div>
+          <button class="primary" id="cp-go">Change Password</button>
+        </div>
+
+        <div class="card">
+          <h3>Recover with recovery key</h3>
+          <input
+            id="rec-key"
+            type="text"
+            placeholder="Recovery key (XXXXX-XXXXX-…)"
+            aria-label="Recovery key"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="pw-wrapper">
+            <input
+              id="rec-new"
+              type="password"
+              placeholder="New password"
+              aria-label="New password after recovery"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="rec-new"
+              aria-label="Show new password"
+            >
+              👁
+            </button>
+          </div>
+          <div class="pw-wrapper">
+            <input
+              id="rec-new2"
+              type="password"
+              placeholder="Confirm new password"
+              aria-label="Confirm new password after recovery"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="rec-new2"
+              aria-label="Show confirm password"
+            >
+              👁
+            </button>
+          </div>
+          <button class="primary" id="rec-go">Reset Password</button>
+        </div>
+
+        <div class="card">
+          <h3>Recovery key</h3>
+          <p class="hint">
+            Generate a new recovery key (invalidates the old one) or remove it.
+            The key itself is never stored, so it can't be displayed later.
+          </p>
+          <div class="pw-wrapper">
+            <input
+              id="rk-pass"
+              type="password"
+              placeholder="Current password"
+              aria-label="Current password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="rk-pass"
+              aria-label="Show password"
+            >
+              👁
+            </button>
+          </div>
+          <div class="field">
+            <label for="rk-keyfile" style="font-size: 0.85em"
+              >Keyfile (if required)</label
+            >
+            <div class="row">
+              <input
+                id="rk-keyfile"
+                type="text"
+                readonly
+                placeholder="No keyfile selected"
+              />
+              <button id="rk-keyfile-browse" class="secondary" type="button">
+                Browse
+              </button>
+              <button id="rk-keyfile-clear" class="secondary" type="button">
+                Clear
+              </button>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="rk-regen">Generate New Key</button>
+            <button class="secondary" id="rk-remove">Remove Key</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Vault metadata</h3>
+          <p class="hint">
+            Optional plaintext label for this vault (stored unencrypted in the
+            header).
+          </p>
+          <input
+            id="meta-name"
+            type="text"
+            placeholder="Name (optional)"
+            aria-label="Vault name"
+            autocomplete="off"
+          />
+          <input
+            id="meta-desc"
+            type="text"
+            placeholder="Description (optional)"
+            aria-label="Vault description"
+            autocomplete="off"
+          />
+          <div class="pw-wrapper">
+            <input
+              id="meta-pass"
+              type="password"
+              placeholder="Password"
+              aria-label="Password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="meta-pass"
+              aria-label="Show password"
+            >
+              👁
+            </button>
+          </div>
+          <div class="field">
+            <label for="meta-keyfile" style="font-size: 0.85em"
+              >Keyfile (if required)</label
+            >
+            <div class="row">
+              <input
+                id="meta-keyfile"
+                type="text"
+                readonly
+                placeholder="No keyfile selected"
+              />
+              <button id="meta-keyfile-browse" class="secondary" type="button">
+                Browse
+              </button>
+              <button id="meta-keyfile-clear" class="secondary" type="button">
+                Clear
+              </button>
+            </div>
+          </div>
+          <button class="secondary" id="meta-go">Save Metadata</button>
+        </div>
+
+        <div class="card danger-card">
+          <h3>Delete vault</h3>
+          <p class="hint">
+            Permanently removes the selected vault file. This cannot be undone.
+          </p>
+          <div class="pw-wrapper">
+            <input
+              id="del-pass"
+              type="password"
+              placeholder="Password"
+              aria-label="Password required to delete"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              data-target="del-pass"
+              aria-label="Show password"
+            >
+              👁
+            </button>
+          </div>
+          <div class="field">
+            <label for="del-keyfile" style="font-size: 0.85em"
+              >Keyfile (if required)</label
+            >
+            <div class="row">
+              <input
+                id="del-keyfile"
+                type="text"
+                readonly
+                placeholder="No keyfile selected"
+              />
+              <button id="del-keyfile-browse" class="secondary" type="button">
+                Browse
+              </button>
+              <button id="del-keyfile-clear" class="secondary" type="button">
+                Clear
+              </button>
+            </div>
+          </div>
+          <label class="checkbox">
+            <input id="del-shred" type="checkbox" />
+            Shred (overwrite bytes before deleting)
+          </label>
+          <button class="danger" id="del-go">Delete Vault</button>
+        </div>
+      </section>
+
+      <!-- SESSIONS -->
+      <section
+        class="panel"
+        id="panel-sessions"
+        role="tabpanel"
+        aria-labelledby="tab-sessions"
+        tabindex="0"
+      >
+        <h2>Currently open vaults</h2>
+        <p class="hint">
+          Open vaults are decrypted into temporary folders. Close them to
+          re-encrypt and clean up.
+        </p>
+        <div
+          id="sessions-list"
+          class="sessions"
+          role="group"
+          aria-live="polite"
+          aria-label="Open vault sessions"
+        ></div>
+        <button
+          class="secondary"
+          id="sessions-refresh"
+          aria-label="Refresh sessions list"
+        >
+          Refresh
+        </button>
+      </section>
+    </main>
+
+    <!-- loading overlay (shown during slow vault operations) -->
+    <div
+      id="loading-overlay"
+      class="loading-overlay hidden"
+      role="status"
+      aria-live="assertive"
+      aria-label="Operation in progress"
+    >
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="loading-label">Working…</p>
+    </div>
+
+    <!-- toast. Errors persist until dismissed (see toast() in renderer.js);
+         success and warning messages auto-hide after a few seconds. -->
+    <div
+      id="toast"
+      class="toast hidden"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      tabindex="-1"
+    ></div>
+
+    <!-- text-prompt modal. Electron does not implement window.prompt (it
+         throws), so the file browser's rename needs an in-app dialog rather
+         than the browser primitive. -->
+    <div
+      id="prompt-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="prompt-title"
+    >
+      <div class="modal-box">
+        <h3 id="prompt-title">Rename</h3>
+        <div class="field">
+          <label for="prompt-input">New name</label>
+          <input
+            id="prompt-input"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="row">
+          <button class="secondary" id="prompt-cancel">Cancel</button>
+          <button class="primary" id="prompt-ok">Rename</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- recovery-key modal -->
+    <div
+      id="modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      aria-describedby="modal-desc"
+    >
+      <div class="modal-box">
+        <h3 id="modal-title">🔑 Recovery Key</h3>
+        <p id="modal-desc">
+          Save this somewhere safe. It is the only way to recover the vault if
+          you forget the password. It will not be shown again.
+        </p>
+        <pre
+          id="modal-key"
+          class="rec-key"
+          aria-label="Recovery key value"
+        ></pre>
+        <label class="checkbox modal-ack">
+          <input
+            id="modal-ack-check"
+            type="checkbox"
+            aria-describedby="modal-ack-label"
+          />
+          <span id="modal-ack-label"
+            >I have saved my recovery key in a safe place</span
+          >
+        </label>
+        <div class="row">
+          <button class="secondary" id="modal-copy">Copy</button>
+          <button class="primary" id="modal-ok" disabled aria-disabled="true">
+            I've saved it
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- settings modal -->
+    <div
+      id="settings-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+    >
+      <div class="modal-box">
+        <h3 id="settings-title">⚙️ Settings</h3>
+        <div class="field">
+          <label for="auto-lock-select">Auto-lock after idle</label>
+          <select
+            id="auto-lock-select"
+            class="settings-select"
+            aria-label="Auto-lock duration"
+          >
+            <option value="0">Never</option>
+            <option value="5">5 minutes</option>
+            <option value="15">15 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="theme-select">Theme</label>
+          <select
+            id="theme-select"
+            class="settings-select"
+            aria-label="Color theme"
+          >
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="system">System</option>
+          </select>
+        </div>
+        <div class="row" style="justify-content: flex-end; margin-top: 16px">
+          <button class="primary" id="settings-close">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- first-run welcome modal -->
+    <div
+      id="welcome-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="welcome-title"
+    >
+      <div class="modal-box welcome-box">
+        <div style="font-size: 3rem; text-align: center; margin-bottom: 8px">
+          🔐
+        </div>
+        <h3 id="welcome-title" style="text-align: center">
+          Welcome to ShadowBit
+        </h3>
+        <p
+          style="
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 20px;
+          "
+        >
+          Create portable, encrypted vault files you can email or share.
+        </p>
+        <ol class="welcome-steps">
+          <li>
+            <strong>Create</strong> — choose a password and create a
+            <code>.vault</code> file.
+          </li>
+          <li>
+            <strong>Open</strong> — decrypt to a temporary folder and add your
+            files.
+          </li>
+          <li>
+            <strong>Close</strong> — re-encrypt everything back into the vault.
+          </li>
+        </ol>
+        <button
+          class="primary"
+          id="welcome-start"
+          style="width: 100%; margin-top: 16px"
+        >
+          Get Started →
+        </button>
+      </div>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
