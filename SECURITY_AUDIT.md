@@ -295,7 +295,7 @@ they are polish items to schedule afterwards.
   escrow on upgrade, or only bump the version once the escrow is actually v2.
   At minimum, add a code comment explaining the intentional decoupling.
 - **F3. Author vs. LICENSE mismatch / PII exposure.** `package.json` `author`
-  is a real corporate email (`lucian.vuc@sap.com`) while `LICENSE` attributes
+  is a real corporate email (`lucian.vuc@gmail.com`) while `LICENSE` attributes
   copyright to "ShadowBit contributors" and is dated **2026** (future).
   Before a public `npm publish`: align the copyright holder with the author,
   fix the year, and decide whether a corporate email should appear publicly in
