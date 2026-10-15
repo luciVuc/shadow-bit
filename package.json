@@ -112,10 +112,10 @@
     },
     "fileAssociations": [
       {
-        "ext": "vault",
+        "ext": "svlt",
         "name": "ShadowBit Vault",
         "description": "Encrypted vault container",
-        "mimeType": "application/x-shadowbit-vault",
+        "mimeType": "application/x-shadowbit-svlt",
         "role": "Viewer"
       }
     ]

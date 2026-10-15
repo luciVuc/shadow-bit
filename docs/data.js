@@ -4,7 +4,7 @@ window.APP_DATA = {
   meta: {
     title: "ShadowBit",
     tagline: "One encrypted file. One password. No accounts, no cloud.",
-    subTagline: "Lock a folder into a single .vault file and send it anywhere.",
+    subTagline: "Lock a folder into a single .svlt file and send it anywhere.",
     version: "1.0.0",
     github: "https://github.com/lucianvuc/shadow-bit",
     license: "MIT",
@@ -15,7 +15,7 @@ window.APP_DATA = {
     {
       icon: "✉️",
       title: "Share sensitive files over email",
-      desc: "Tax returns, contracts, medical records — drop them in a vault and email the single .vault file. The recipient opens it with the password you share out-of-band. No cloud, no sign-up, no third party.",
+      desc: "Tax returns, contracts, medical records — drop them in a vault and email the single .svlt file. The recipient opens it with the password you share out-of-band. No cloud, no sign-up, no third party.",
       audience: "Freelancers, families, small businesses",
     },
     {
@@ -27,7 +27,7 @@ window.APP_DATA = {
     {
       icon: "🖥️",
       title: "Protect files on shared computers",
-      desc: "Keep personal files private on a family or work computer. Other users see a .vault they cannot open without the password. Works alongside — not instead of — full-disk encryption.",
+      desc: "Keep personal files private on a family or work computer. Other users see a .svlt they cannot open without the password. Works alongside — not instead of — full-disk encryption.",
       audience: "Students, shared households, office workers",
     },
     {
@@ -48,7 +48,7 @@ window.APP_DATA = {
     {
       icon: "📦",
       title: "One Portable File",
-      desc: "A vault is one .vault file. Email it, drop it on USB, attach it to a message. The recipient needs only the file and the password — no registry, no side files, no account.",
+      desc: "A vault is one .svlt file. Email it, drop it on USB, attach it to a message. The recipient needs only the file and the password — no registry, no side files, no account.",
     },
     {
       icon: "⚡",
@@ -412,7 +412,7 @@ window.APP_DATA = {
       id: "open",
       label: "Open",
       icon: "🔓",
-      desc: "Browse for a .vault file, enter your password, and optionally select a keyfile. The working folder opens automatically in Finder or Explorer.",
+      desc: "Browse for a .svlt file, enter your password, and optionally select a keyfile. The working folder opens automatically in Finder or Explorer.",
     },
     {
       id: "create",
@@ -450,8 +450,8 @@ window.APP_DATA = {
         {
           q: "What is a vault, and what happens to my files?",
           a: [
-            "A vault is one .vault file. Creating one packs a folder into a single encrypted bundle. Opening it decrypts that bundle into a temporary working folder you can edit with ordinary tools. Closing packs the folder back, re-encrypts, and securely wipes the working copy.",
-            "The .vault file itself is never edited in place — only the working folder is. That is why you can use Finder, Explorer or a text editor on the contents and still get them back encrypted.",
+            "A vault is one .svlt file. Creating one packs a folder into a single encrypted bundle. Opening it decrypts that bundle into a temporary working folder you can edit with ordinary tools. Closing packs the folder back, re-encrypts, and securely wipes the working copy.",
+            "The .svlt file itself is never edited in place — only the working folder is. That is why you can use Finder, Explorer or a text editor on the contents and still get them back encrypted.",
           ],
           code: "./shadow-bit create project --seed ./my-files\n./shadow-bit open project\n# edit files in the folder it printed\n./shadow-bit close project",
         },
@@ -470,14 +470,14 @@ window.APP_DATA = {
           ],
         },
         {
-          q: "What does an attacker learn from the .vault file alone?",
+          q: "What does an attacker learn from the .svlt file alone?",
           a: [
             "The header is plaintext and carries no secret — KDF parameters, a random per-vault salt, the password-wrapped master key, the recovery-wrapped copy, and the AEAD tag. Reading it tells them the file format version, the algorithm, that you use ShadowBit, how many bytes you stored, and — unless the vault was created with --paranoid — when it was created and last modified.",
             "The contents stay opaque. The payload is sealed with AES-256-GCM (or ChaCha20-Poly1305) under a random 256-bit master key that only your password — or your recovery key — unwraps.",
           ],
           note: {
             tone: "warn",
-            text: "A .vault file is recognisable. Paranoid mode hides timestamps and metadata inside the header; it does not make the file itself look like anything else.",
+            text: "A .svlt file is recognisable. Paranoid mode hides timestamps and metadata inside the header; it does not make the file itself look like anything else.",
           },
         },
         {
@@ -541,9 +541,9 @@ window.APP_DATA = {
         {
           q: "How do I share a vault with someone?",
           a: [
-            "Create it, put the files in, close it, send the single .vault file, and share the password over a different channel. The recipient needs the file and the password — nothing else, and no account on your side.",
+            "Create it, put the files in, close it, send the single .svlt file, and share the password over a different channel. The recipient needs the file and the password — nothing else, and no account on your side.",
           ],
-          code: "# Sender\n./shadow-bit create shared --no-recovery\n./shadow-bit open  shared\n# copy files into the working folder it printed\n./shadow-bit close shared\n\n# Send shared.vault; give the password over a call or in person\n\n# Recipient\n./shadow-bit open received.vault",
+          code: "# Sender\n./shadow-bit create shared --no-recovery\n./shadow-bit open  shared\n# copy files into the working folder it printed\n./shadow-bit close shared\n\n# Send shared.svlt; give the password over a call or in person\n\n# Recipient\n./shadow-bit open received.svlt",
         },
         {
           q: "How do I automate this in a script or cron job?",
@@ -615,7 +615,7 @@ window.APP_DATA = {
           q: "Can I hide a vault inside a photo or PDF (steganography)?",
           a: [
             "Not in this build either. src/core/stego.ts implements appending a vault after a carrier file's end-of-file, so any viewer still opens the carrier normally, and it round-trips correctly in the test suite — but again nothing in the CLI or the app imports it, so there is no command to embed or extract a vault.",
-            "ROADMAP.md §21.4 tracks it. Today a .vault file is opaque, but it is not disguised.",
+            "ROADMAP.md §21.4 tracks it. Today a .svlt file is opaque, but it is not disguised.",
           ],
         },
         {
@@ -720,9 +720,9 @@ window.APP_DATA = {
         {
           q: "Can I open a vault on a machine where I only have the file?",
           a: [
-            "Yes. You need the .vault file, the password, and any keyfile it requires. Nothing has to be registered or configured first: run open on the file, or pick it in the desktop app.",
+            "Yes. You need the .svlt file, the password, and any keyfile it requires. Nothing has to be registered or configured first: run open on the file, or pick it in the desktop app.",
           ],
-          code: "./shadow-bit open received.vault",
+          code: "./shadow-bit open received.svlt",
         },
       ],
     },
@@ -740,7 +740,7 @@ window.APP_DATA = {
         },
         {
           name: "container.ts",
-          desc: ".vault binary format (magic SHDBIT\\0\\1, plaintext header + ciphertext payload, atomic tmp+rename writes, epoch timestamp scrubbing)",
+          desc: ".svlt binary format (magic SHDBIT\\0\\1, plaintext header + ciphertext payload, atomic tmp+rename writes, epoch timestamp scrubbing)",
         },
         {
           name: "bundle.ts",

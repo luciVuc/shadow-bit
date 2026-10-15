@@ -27,7 +27,7 @@ npx --yes serve -l 9090 docs/
 | Section           | What it covers                                                                                                                         |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | **Hero**          | Animated lock icon, tagline, stat pills (cipher, KDF, format, platforms)                                                               |
-| **Vault Format**  | Visual diagram of the `.vault` binary format + legend explaining envelope encryption, GCM auth, and the recovery key                   |
+| **Vault Format**  | Visual diagram of the `.svlt` binary format + legend explaining envelope encryption, GCM auth, and the recovery key                    |
 | **Features**      | 10 feature cards covering encryption, portability, password changes, recovery key, CLI+GUI, scrypt, drag-and-drop                      |
 | **How It Works**  | 4-step workflow cards (Create → Open → Edit → Close) with inline CLI examples                                                          |
 | **Installation**  | Platform tabs (macOS / Windows / Linux / From Source) with code blocks and copy buttons                                                |

@@ -553,7 +553,7 @@ describe("keyboard", () => {
     // dialog. Set it the way the Browse button does rather than typing it.
     await h.page.evaluate(() => {
       (document.getElementById("create-path") as HTMLInputElement).value =
-        "/tmp/focus-test.vault";
+        "/tmp/focus-test.svlt";
     });
     await h.page.fill("#create-password", "correct-horse-battery");
     await h.page.fill("#create-password2", "correct-horse-battery");

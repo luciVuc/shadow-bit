@@ -20,6 +20,7 @@ import * as path from "path";
 import { existsSync } from "fs";
 import { pathToFileURL } from "url";
 import { loadSessions } from "../core/sessions";
+import { VAULT_EXT, VAULT_EXTS, hasVaultExt } from "../core/container";
 import {
   addRecentVault,
   getRecentVaults,
@@ -63,7 +64,7 @@ let pendingFilePath: string | null = null;
 
 app.on("open-file", (event, filePath) => {
   event.preventDefault();
-  if (filePath.endsWith(".vault") && existsSync(filePath)) {
+  if (hasVaultExt(filePath) && existsSync(filePath)) {
     pendingFilePath = path.resolve(filePath);
     const wins = BrowserWindow.getAllWindows();
     if (wins.length > 0) {
@@ -75,7 +76,7 @@ app.on("open-file", (event, filePath) => {
 
 function getArgFilePath(): string | null {
   const args = process.argv.slice(app.isPackaged ? 1 : 2);
-  const vaultArg = args.find((a) => a.endsWith(".vault") && existsSync(a));
+  const vaultArg = args.find((a) => hasVaultExt(a) && existsSync(a));
   return vaultArg ? path.resolve(vaultArg) : null;
 }
 
@@ -384,7 +385,7 @@ async function lockOpenVaults(reason: "auto" | "manual"): Promise<void> {
 
 /**
  * Menu-driven lock. Unlike the auto-lock timer this asks first: locking erases
- * the working folders, so anything not yet saved to the .vault file is lost.
+ * the working folders, so anything not yet saved to the .svlt file is lost.
  */
 async function lockAllVaults(): Promise<void> {
   const sessions = loadSessions().filter((s) => existsSync(s.workingDir));
@@ -656,8 +657,8 @@ handle("dialog:createVaultPath", async () => {
   if (IS_E2E) return nextQueuedPath();
   const res = await dialog.showSaveDialog({
     title: "Create new vault",
-    defaultPath: "secret.vault",
-    filters: [{ name: "Vault", extensions: ["vault"] }],
+    defaultPath: `secret.${VAULT_EXT}`,
+    filters: [{ name: "Vault", extensions: [...VAULT_EXTS] }],
   });
   return res.canceled ? null : res.filePath;
 });
@@ -667,7 +668,7 @@ handle("dialog:openVaultPath", async () => {
   const res = await dialog.showOpenDialog({
     title: "Open vault",
     properties: ["openFile"],
-    filters: [{ name: "Vault", extensions: ["vault"] }],
+    filters: [{ name: "Vault", extensions: [...VAULT_EXTS] }],
   });
   return res.canceled ? null : res.filePaths[0];
 });

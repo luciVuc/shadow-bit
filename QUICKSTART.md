@@ -2,7 +2,7 @@
 
 > **Stealth containers. Enhanced privacy. Total control.**
 >
-> ShadowBit encrypts all your files into a single portable `.vault` file.
+> ShadowBit encrypts all your files into a single portable `.svlt` file.
 > Email it, put it on a USB drive, share it however you like.
 > The recipient opens it with ShadowBit and the password you share out-of-band.
 > No cloud account, no sign-up, no third party.
@@ -29,7 +29,7 @@
 
 ## What is ShadowBit?
 
-ShadowBit is a **portable encrypted file vault**. You create a `.vault` file,
+ShadowBit is a **portable encrypted file vault**. You create a `.svlt` file,
 put any files or folders inside it, and lock it with a password. The result is a
 single file that looks like random bytes to anyone without the password.
 
@@ -154,12 +154,12 @@ npm run gui                    # GUI from source
 
 ## Core concept
 
-A vault is **one file** — say `project.vault`. It looks like a blob of random
+A vault is **one file** — say `project.svlt`. It looks like a blob of random
 bytes to anyone without the password. Inside, all your files are encrypted with
 AES-256-GCM.
 
 ```
-project.vault
+project.svlt
 ┌─────────────────────────────────────────────┐
 │ HEADER (plaintext)                           │
 │   version, KDF params, salt                 │
@@ -196,7 +196,7 @@ npm run gui          # from source
 ### Create a vault
 
 1. Click the **Create** tab.
-2. Click **Browse…** next to "Save vault as" → choose where to save the `.vault` file.
+2. Click **Browse…** next to "Save vault as" → choose where to save the `.svlt` file.
 3. Enter and confirm a strong password (8+ characters).
 4. _(Optional)_ Click **Browse…** next to "Seed from folder" to pre-populate the
    vault with existing files.
@@ -212,7 +212,7 @@ npm run gui          # from source
 ### Open a vault
 
 1. Click the **Open** tab.
-2. Click **Browse…** → select your `.vault` file.
+2. Click **Browse…** → select your `.svlt` file.
 3. Enter the password.
 4. If the vault requires a keyfile, click **Browse** next to "Keyfile (if required)"
    and select the same file used at creation.
@@ -287,7 +287,7 @@ Example output:
 
 Type 'saved' to confirm you stored it: saved
 
-✓ Created vault: /Users/alice/project.vault
+✓ Created vault: /Users/alice/project.svlt
 ```
 
 ### 2. Open a vault
@@ -322,18 +322,18 @@ shadow-bit close project
 # ✓ Closed. All changes re-encrypted into the vault.
 ```
 
-The working folder is securely wiped. The `.vault` file is updated.
+The working folder is securely wiped. The `.svlt` file is updated.
 
 ### 5. Check status
 
 ```bash
 shadow-bit list
 # OPEN VAULTS:
-#   /Users/alice/project.vault
+#   /Users/alice/project.svlt
 #     → /var/folders/.../project-a1b2c3d4  (opened 2025-09-09T10:30:00Z)
 
 shadow-bit info project
-# Vault:        /Users/alice/project.vault
+# Vault:        /Users/alice/project.svlt
 # Version:      3
 # Size:         84.23 KB
 # Recovery key: yes
@@ -366,11 +366,11 @@ shadow-bit create shared --no-recovery
 shadow-bit open shared
 cp ~/Documents/contract.pdf "$(shadow-bit info shared | grep 'Working dir' | awk '{print $3}')/"
 shadow-bit close shared
-# Email / AirDrop / USB: shared.vault
+# Email / AirDrop / USB: shared.svlt
 # Share the password out-of-band (call, Signal, etc.)
 
 # Recipient
-shadow-bit open received.vault
+shadow-bit open received.svlt
 # Password: agreed-password
 # ✓ Opened. Working folder: ...
 ```
@@ -557,7 +557,7 @@ indistinguishable from ciphertext.
 const { createHiddenVault, openHiddenVolume } = require("./dist/core/hidden");
 
 createHiddenVault({
-  vaultPath: "container.vault",
+  vaultPath: "container.svlt",
   outerPassword: "decoy-password", // shown under duress
   hiddenPassword: "real-password", // only when safe
   totalSize: 64 * 1024 * 1024, // fixed size; 8 MiB minimum, 1.5 GiB maximum
@@ -566,10 +566,7 @@ createHiddenVault({
 });
 
 // Open the real data
-const { header, payload } = openHiddenVolume(
-  "container.vault",
-  "real-password",
-);
+const { header, payload } = openHiddenVolume("container.svlt", "real-password");
 ```
 
 ### Steganography (vault inside an image) — **not available in this build**
@@ -595,7 +592,7 @@ hasEmbeddedVault("photo-with-vault.jpg"); // → true
 extractVault("photo-with-vault.jpg"); // → { header, payload, stegoOffset }
 ```
 
-> **What this build does offer.** A `.vault` file's _contents_ are opaque, and
+> **What this build does offer.** A `.svlt` file's _contents_ are opaque, and
 > `--paranoid` removes timestamps and metadata from its header. It does not
 > disguise the file itself: the fixed magic bytes at offset 0 identify it, and
 > its size is visible.

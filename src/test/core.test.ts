@@ -13,6 +13,7 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { sleepSync } from "../core/fsutil";
+import { hasVaultExt } from "../core/container";
 
 const tmpRoot = fs.mkdtempSync(
   path.join(os.tmpdir(), "shadowbit-security-test-"),
@@ -42,7 +43,7 @@ after(() => {
 const PASS = "correct-horse-battery-staple";
 
 function tmpVault(name: string): string {
-  return path.join(tmpRoot, `${name}.vault`);
+  return path.join(tmpRoot, `${name}.svlt`);
 }
 
 function emptyBundleBuffer(): Buffer {
@@ -125,6 +126,31 @@ test("create → open → close → reopen round-trips files", () => {
     Buffer.from([1, 2, 3]),
   );
   vault.discardVault(vp, PASS);
+});
+
+test("the file extension is cosmetic: a legacy .vault path opens unchanged", () => {
+  // ShadowBit writes .svlt, but identification is by MAGIC bytes, not suffix.
+  // A user who renames (or who has a pre-rename vault) must not lose access.
+  const vp = path.join(tmpRoot, "legacy-name.vault");
+  vault.createVault(vp, { password: PASS, generateRecovery: false });
+  const a = vault.openVault(vp, PASS);
+  fs.writeFileSync(path.join(a.workingDir, "kept.txt"), "still here");
+  vault.closeVault(vp, PASS);
+  const b = vault.openVault(vp, PASS);
+  assert.equal(
+    fs.readFileSync(path.join(b.workingDir, "kept.txt"), "utf8"),
+    "still here",
+  );
+  vault.discardVault(vp, PASS);
+});
+
+test("hasVaultExt accepts .svlt and legacy .vault, case-insensitively", () => {
+  for (const p of ["a.svlt", "a.vault", "/x/y/A.SVLT", "secret.svlt"]) {
+    assert.equal(hasVaultExt(p), true, p);
+  }
+  for (const p of ["a.vlt", "a.svg", "vault", ".vaultry", "a.svltx"]) {
+    assert.equal(hasVaultExt(p), false, p);
+  }
 });
 
 test("opening twice with the correct password reuses the session", () => {
@@ -828,7 +854,7 @@ test("embedVault hides a vault inside a carrier file and extractVault recovers i
   assert.ok(extracted!.payload.length > 0);
 
   // The extracted vault should decrypt correctly.
-  // Write it as a normal .vault and open it.
+  // Write it as a normal .svlt and open it.
   const recoveredVp = tmpVault("stego-recovered");
   containerMod.writeContainer(
     recoveredVp,
@@ -1224,7 +1250,7 @@ test("ChaCha20-Poly1305 cipher creates and opens correctly", () => {
 
 test("hidden volume: create, open outer, open hidden", async () => {
   const hiddenMod = await import("../core/hidden.js");
-  const vp = path.join(tmpRoot, "hidden.vault");
+  const vp = path.join(tmpRoot, "hidden.svlt");
   const outerDir = path.join(tmpRoot, "outer-seed");
   const hiddenDir = path.join(tmpRoot, "hidden-seed");
   fs.mkdirSync(outerDir, { recursive: true });
@@ -1267,7 +1293,7 @@ test("hidden volume: create, open outer, open hidden", async () => {
 
 test("hidden volume: wrong hidden password does not reveal existence", async () => {
   const hiddenMod = await import("../core/hidden.js");
-  const vp = path.join(tmpRoot, "hidden-deny.vault");
+  const vp = path.join(tmpRoot, "hidden-deny.svlt");
 
   hiddenMod.createHiddenVault({
     vaultPath: vp,
@@ -1291,7 +1317,7 @@ test("hidden volume: a crafted file full of SBHID magic cannot burn CPU", async 
   // CPU-exhaustion loop. The attempt count is capped; a container written by
   // createHiddenVault needs exactly one.
   const hiddenMod = await import("../core/hidden.js");
-  const vp = path.join(tmpRoot, "hidden-dos.vault");
+  const vp = path.join(tmpRoot, "hidden-dos.svlt");
 
   hiddenMod.createHiddenVault({
     vaultPath: vp,
@@ -1438,7 +1464,7 @@ test("concurrent addSession calls from separate processes all persist", async ()
       new Promise<void>((resolve, reject) => {
         const proc = spawn(
           process.execPath,
-          ["--import", "tsx", childSrc, `vault-${i}.vault`],
+          ["--import", "tsx", childSrc, `vault-${i}.svlt`],
           {
             env: { ...process.env, SHADOWBIT_CONFIG_DIR: cfgDir },
             stdio: "ignore",
@@ -1498,7 +1524,7 @@ test("session lock file is released even when the mutation throws", () => {
   // Poison the registry with a non-array value so readSessionsUnlocked
   // returns [], then drive a mutation. The lock must not leak afterwards.
   sessions.addSession({
-    vaultPath: path.join(tmpRoot, "lock-release.vault"),
+    vaultPath: path.join(tmpRoot, "lock-release.svlt"),
     workingDir: path.join(tmpRoot, "wd"),
     openedAt: new Date().toISOString(),
   });
@@ -2440,7 +2466,7 @@ test("M7: concurrent settings writes do not lose each other's updates", async ()
   // The recent-vault entry must point at a file that exists: getRecentVaults()
   // deliberately filters out paths that have been deleted, so a dangling path
   // would read back as an empty list and look like a lost update.
-  const recentVault = path.join(tmpRoot, "settings-race-recent.vault");
+  const recentVault = path.join(tmpRoot, "settings-race-recent.svlt");
   fs.writeFileSync(recentVault, "placeholder");
   const fields = [
     { name: "theme", value: "light" },

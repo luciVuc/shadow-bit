@@ -22,7 +22,7 @@ const DIST_MAIN = path.resolve(__dirname, "../dist/gui/main.js");
 const PASS = "smoke-test-password-abc-123!";
 const NEW_PASS = "new-smoke-password-XYZ-789!";
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "shadowbit-e2e-"));
-const vaultPath = path.join(tmpDir, "smoke.vault");
+const vaultPath = path.join(tmpDir, "smoke.svlt");
 
 let app: ElectronApplication;
 let page: Page;
@@ -218,7 +218,7 @@ describe("ShadowBit GUI smoke tests", () => {
     const modalVisible = await page.isVisible("#modal:not(.hidden)");
     if (!modalVisible) {
       // Re-trigger: we need a different path since vaultPath already exists
-      const vp2 = path.join(tmpDir, "smoke2.vault");
+      const vp2 = path.join(tmpDir, "smoke2.svlt");
       await switchTab("create");
       await setInput("create-path", vp2);
       await page.fill("#create-password", PASS);
@@ -431,7 +431,7 @@ describe("ShadowBit GUI smoke tests", () => {
     // keeps its header free of optional plaintext, so the GUI has to say out
     // loud that the name it just saved is now readable in the file — a silent
     // success would defeat the mode the user chose.
-    const paranoidPath = path.join(tmpDir, "smoke-paranoid.vault");
+    const paranoidPath = path.join(tmpDir, "smoke-paranoid.svlt");
     createVault(paranoidPath, { password: PASS, paranoid: true });
 
     await switchTab("manage");
@@ -900,8 +900,8 @@ function clickMenuPath(
 
 describe("ShadowBit application menu", () => {
   const isMac = process.platform === "darwin";
-  const recentVaultPath = path.join(tmpDir, "menu-recent.vault");
-  const lockVaultPath = path.join(tmpDir, "menu-lock.vault");
+  const recentVaultPath = path.join(tmpDir, "menu-recent.svlt");
+  const lockVaultPath = path.join(tmpDir, "menu-lock.svlt");
 
   const at = (
     ...path: string[]
@@ -1069,7 +1069,7 @@ describe("ShadowBit application menu", () => {
   });
 
   test("File > New Vault… starts the Create flow with the chosen path", async () => {
-    const target = path.join(tmpDir, "from-menu.vault");
+    const target = path.join(tmpDir, "from-menu.svlt");
     await queuePath(target);
     await click("File", "New Vault…");
     await page.waitForSelector("#panel-create.active", { timeout: UI_TIMEOUT });

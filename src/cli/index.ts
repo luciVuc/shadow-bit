@@ -23,6 +23,7 @@ import {
 } from "../core/vault";
 import { loadSessions, removeSession } from "../core/sessions";
 import { secureEraseDir } from "../core/fsutil";
+import { VAULT_EXT } from "../core/container";
 import { confirm, prompt, promptHidden, promptNewPassword } from "./prompts";
 
 const program = new Command();
@@ -52,11 +53,11 @@ function formatBytes(n: number): string {
 
 function resolveVaultPath(name: string): string {
   // Accept either a path or a bare name. A bare name with no extension gets
-  // the .vault suffix; existing files are always used exactly as given even
+  // the .svlt suffix; existing files are always used exactly as given even
   // if they have no extension (L9).
   let p = name;
   const base = path.basename(p);
-  if (!fs.existsSync(p) && !base.includes(".")) p += ".vault";
+  if (!fs.existsSync(p) && !base.includes(".")) p += `.${VAULT_EXT}`;
   return path.resolve(p);
 }
 
@@ -146,7 +147,7 @@ program
 // --- create ---------------------------------------------------------------
 program
   .command("create")
-  .argument("<name>", "vault name or path (e.g. secret or secret.vault)")
+  .argument("<name>", "vault name or path (e.g. secret or secret.svlt)")
   .description("Create a new encrypted vault container")
   .option("--password <pwd>", "password (omit for a hidden prompt)")
   .option("--no-recovery", "do not generate a recovery key")

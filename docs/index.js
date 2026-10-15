@@ -460,24 +460,24 @@ class App {
 
     const configs = {
       open: [
-        { label: "Vault file", value: "📄 project.vault" },
+        { label: "Vault file", value: "📄 project.svlt" },
         { label: "Password", value: "••••••••••••" },
       ],
       create: [
-        { label: "Save as", value: "📄 secrets.vault" },
+        { label: "Save as", value: "📄 secrets.svlt" },
         { label: "Password", value: "••••••••••••" },
         { label: "Confirm password", value: "••••••••••••" },
         { label: "Seed from folder (optional)", value: "📁 ~/Documents/…" },
       ],
       manage: [
-        { label: "Vault file", value: "📄 project.vault" },
+        { label: "Vault file", value: "📄 project.svlt" },
         { label: "Current password", value: "••••••••••••" },
         { label: "New password", value: "••••••••••••" },
       ],
       sessions: [
         {
           label: "Open vault",
-          value: "📄 project.vault  →  /tmp/shadow-bit/project-a1b2c3",
+          value: "📄 project.svlt  →  /tmp/shadow-bit/project-a1b2c3",
         },
         { label: "Drop zone", value: "🗂 Drag files here to add them" },
       ],

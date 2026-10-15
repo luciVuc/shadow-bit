@@ -34,7 +34,7 @@ let seq = 0;
 function fixture(name: string): { cfg: string; vault: string } {
   const dir = path.join(tmpRoot, `${seq++}-${name}`);
   fs.mkdirSync(dir, { recursive: true });
-  return { cfg: path.join(dir, "cfg"), vault: path.join(dir, `${name}.vault`) };
+  return { cfg: path.join(dir, "cfg"), vault: path.join(dir, `${name}.svlt`) };
 }
 
 /**
@@ -587,7 +587,7 @@ test("CLI e2e: delete without -y prompts, and 'n' aborts", async () => {
 test("CLI e2e: opening a non-existent vault errors", async () => {
   const { cfg, vault } = fixture("missing");
   const res = await runCli(
-    ["open", path.join(cfg, "nope.vault"), "--password", PASS],
+    ["open", path.join(cfg, "nope.svlt"), "--password", PASS],
     cfg,
   );
   assert.equal(res.code, 1);

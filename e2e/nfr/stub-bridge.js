@@ -54,10 +54,10 @@
 
   var defaults = {
     chooseCreatePath: function () {
-      return Promise.resolve("/tmp/stub.vault");
+      return Promise.resolve("/tmp/stub.svlt");
     },
     chooseOpenPath: function () {
-      return Promise.resolve("/tmp/stub.vault");
+      return Promise.resolve("/tmp/stub.svlt");
     },
     chooseDir: function () {
       return Promise.resolve("/tmp");
@@ -74,7 +74,7 @@
     },
     openVault: function () {
       return Promise.resolve({
-        vaultPath: "/tmp/stub.vault",
+        vaultPath: "/tmp/stub.svlt",
         workingDir: "/tmp/stub-wd",
       });
     },
@@ -100,7 +100,7 @@
     },
     info: function () {
       return Promise.resolve({
-        vaultPath: "/tmp/stub.vault",
+        vaultPath: "/tmp/stub.svlt",
         version: 3,
         hasRecoveryKey: true,
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -131,7 +131,7 @@
       // and renderer.js branches on res.paranoid. Returning null would make the
       // paranoid warning unreachable in the NFR harness, so a renderer change
       // that depended on it would be untested here.
-      return Promise.resolve({ vaultPath: "/tmp/stub.vault", paranoid: false });
+      return Promise.resolve({ vaultPath: "/tmp/stub.svlt", paranoid: false });
     },
     confirmDialog: function () {
       return Promise.resolve(true);

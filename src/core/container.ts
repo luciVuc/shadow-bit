@@ -28,6 +28,36 @@ import * as fs from "fs";
 import { VaultHeader } from "./types";
 import { MAX_PAYLOAD_SIZE } from "./bundle";
 
+/**
+ * Filename extension for vault containers.
+ *
+ * The extension is cosmetic and never part of the format: identification is by
+ * MAGIC bytes, and `readHeader`/`openVault` accept a path with any suffix. It
+ * exists only to name the *default* output and to claim a file association.
+ *
+ * It is NOT `.vault`, because `.vault` is claimed by several unrelated tools
+ * (HashiCorp, Bitwarden). A collision there means double-clicking opens some
+ * other program, and the OS file picker groups every vault family's files
+ * under one filter. `.vlt` was rejected for the same reason twice over — it is
+ * WinVault's container extension *and* VLC's skin extension.
+ */
+export const VAULT_EXT = "svlt";
+/**
+ * The extension ShadowBit used before VAULT_EXT existed. Still recognised on
+ * every path that decides "is this a vault file the user picked?" — a rename is
+ * not a re-encryption, and refusing to open a legacy `.vault` because of a
+ * cosmetic change would lose the user's data.
+ */
+export const LEGACY_VAULT_EXT = "vault";
+/** Extensions that identify a vault file for association/filter purposes. */
+export const VAULT_EXTS = [VAULT_EXT, LEGACY_VAULT_EXT] as const;
+
+/** True if `p` ends in a current or legacy vault extension (case-insensitive). */
+export function hasVaultExt(p: string): boolean {
+  const lower = p.toLowerCase();
+  return VAULT_EXTS.some((e) => lower.endsWith(`.${e}`));
+}
+
 export const MAGIC = Buffer.from("SHDBIT\x00\x01", "latin1"); // 8 bytes
 /** The header's `magic` string field (distinct from the binary MAGIC above). */
 export const HEADER_MAGIC = "SHDBIT";

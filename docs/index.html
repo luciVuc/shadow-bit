@@ -6,7 +6,7 @@
     <title>ShadowBit — one encrypted file, one password, no accounts</title>
     <meta
       name="description"
-      content="ShadowBit locks a folder into a single encrypted .vault file you can email or carry on a USB stick. AES-256-GCM, scrypt, a recovery key, and keyfile support. CLI and Electron desktop app."
+      content="ShadowBit locks a folder into a single encrypted .svlt file you can email or carry on a USB stick. AES-256-GCM, scrypt, a recovery key, and keyfile support. CLI and Electron desktop app."
     />
 
     <!-- Local styles. utilities.css must come after index.css: it holds the
@@ -289,7 +289,7 @@
 cp report.pdf &lt;working-folder&gt;/
 ./shadow-bit close shared
 
-# Send shared.vault via email/USB
+# Send shared.svlt via email/USB
 # Recipient opens with the same password</code></pre>
             </div>
 
@@ -526,7 +526,7 @@ ls &lt;working-folder&gt;
           <div class="section-tag mb-4">What is a Vault?</div>
           <h2 class="section-heading mb-4">One file holds everything.</h2>
           <p class="text-sb-muted text-lg mb-12 max-w-2xl">
-            A <code class="code-inline">.vault</code> file is a self-contained
+            A <code class="code-inline">.svlt</code> file is a self-contained
             encrypted archive. It carries everything needed to decrypt it — KDF
             parameters, salt, wrapped master key, auth tag — except your
             password. Email it, put it on USB, attach it to a message. The
@@ -537,7 +537,7 @@ ls &lt;working-folder&gt;
           <div class="vault-diagram">
             <div class="vault-diagram-file">
               <div class="font-mono text-sm text-sb-cyan mb-4">
-                📄 project.vault
+                📄 project.svlt
               </div>
               <div class="vault-block vault-block-header">
                 <div class="vault-block-label">

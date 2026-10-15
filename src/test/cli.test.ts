@@ -104,7 +104,7 @@ after(() => {
 });
 
 test("CLI: create → open → add → close → reopen round-trips files", async () => {
-  const vp = path.join(tmpRoot, "cycle.vault");
+  const vp = path.join(tmpRoot, "cycle.svlt");
   const cfg = path.join(tmpRoot, "cfg-cycle");
   const external = path.join(tmpRoot, "external.txt");
   fs.writeFileSync(external, "external file");
@@ -154,7 +154,7 @@ test("CLI: create → open → add → close → reopen round-trips files", asyn
 });
 
 test("CLI: wrong password fails on open", async () => {
-  const vp = path.join(tmpRoot, "badpw.vault");
+  const vp = path.join(tmpRoot, "badpw.svlt");
   const cfg = path.join(tmpRoot, "cfg-badpw");
   await runCli(["create", vp, "--password", PASS, "--no-recovery"], {
     configDir: cfg,
@@ -168,7 +168,7 @@ test("CLI: wrong password fails on open", async () => {
 });
 
 test("CLI: closing a vault that is not open errors", async () => {
-  const vp = path.join(tmpRoot, "notopen.vault");
+  const vp = path.join(tmpRoot, "notopen.svlt");
   const cfg = path.join(tmpRoot, "cfg-notopen");
   await runCli(["create", vp, "--password", PASS, "--no-recovery"], {
     configDir: cfg,
@@ -182,7 +182,7 @@ test("CLI: closing a vault that is not open errors", async () => {
 });
 
 test("CLI: info shows metadata and list shows open sessions", async () => {
-  const vp = path.join(tmpRoot, "meta.vault");
+  const vp = path.join(tmpRoot, "meta.svlt");
   const cfg = path.join(tmpRoot, "cfg-meta");
   await runCli(["create", vp, "--password", PASS, "--no-recovery"], {
     configDir: cfg,
@@ -206,7 +206,7 @@ test("CLI: info shows metadata and list shows open sessions", async () => {
 });
 
 test("CLI: change-password and recover-with-recovery-key are scriptable", async () => {
-  const vp = path.join(tmpRoot, "recover.vault");
+  const vp = path.join(tmpRoot, "recover.svlt");
   const cfg = path.join(tmpRoot, "cfg-recover");
 
   const created = await runCli(["create", vp, "--password", PASS], {
@@ -273,7 +273,7 @@ test("CLI: change-password and recover-with-recovery-key are scriptable", async 
 });
 
 test("CLI: recovery-key --upgrade re-salts a legacy v1 escrow end-to-end", async () => {
-  const vp = path.join(tmpRoot, "legacy.vault");
+  const vp = path.join(tmpRoot, "legacy.svlt");
   const cfg = path.join(tmpRoot, "cfg-upgrade");
   const recoveryKey = "AAAAA-BBBBB-CCCCC-DDDDD-EEEEE-FFFFF-GGGGG-HHHHH";
   await makeLegacyVault(vp, PASS, recoveryKey);
@@ -312,7 +312,7 @@ test("CLI: recovery-key --upgrade re-salts a legacy v1 escrow end-to-end", async
 });
 
 test("CLI: delete requires the correct password (B1)", async () => {
-  const vp = path.join(tmpRoot, "delete-auth.vault");
+  const vp = path.join(tmpRoot, "delete-auth.svlt");
   const cfg = path.join(tmpRoot, "cfg-del-auth");
   await runCli(["create", vp, "--password", PASS, "--no-recovery"], {
     configDir: cfg,
@@ -335,7 +335,7 @@ test("CLI: delete requires the correct password (B1)", async () => {
 });
 
 test("CLI: meta command sets and reads vault metadata", async () => {
-  const vp = path.join(tmpRoot, "meta-vault.vault");
+  const vp = path.join(tmpRoot, "meta-vault.svlt");
   const cfg = path.join(tmpRoot, "cfg-meta-cmd");
   await runCli(["create", vp, "--password", PASS, "--no-recovery"], {
     configDir: cfg,
@@ -370,7 +370,7 @@ test("CLI: meta command sets and reads vault metadata", async () => {
 });
 
 test("CLI: add command reports symlinks skipped", async () => {
-  const vp = path.join(tmpRoot, "add-symlink.vault");
+  const vp = path.join(tmpRoot, "add-symlink.svlt");
   const cfg = path.join(tmpRoot, "cfg-add-sym");
   const srcDir = path.join(tmpRoot, "add-src");
   fs.mkdirSync(srcDir, { recursive: true });
@@ -396,7 +396,7 @@ test("CLI: add command reports symlinks skipped", async () => {
 });
 
 test("CLI: clean command removes stale sessions", async () => {
-  const vp = path.join(tmpRoot, "clean-test.vault");
+  const vp = path.join(tmpRoot, "clean-test.svlt");
   const cfg = path.join(tmpRoot, "cfg-clean");
   await runCli(["create", vp, "--password", PASS, "--no-recovery"], {
     configDir: cfg,

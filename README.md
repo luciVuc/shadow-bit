@@ -2,7 +2,7 @@
 
 **Stealth containers. Enhanced privacy. Total control.**
 
-ShadowBit creates **encrypted, shareable `.vault` files** — a single self-contained file
+ShadowBit creates **encrypted, shareable `.svlt` files** — a single self-contained file
 you can email, drop on a USB stick, or send as an attachment. The recipient needs only
 that one file plus the password to open it — nothing else, no account, no cloud, no
 software installation beyond ShadowBit itself.
@@ -19,7 +19,7 @@ AES-256-GCM ciphertext. Everything needed to decrypt is in the file — except y
 password.
 
 ```
-myvault.vault
+myvault.svlt
 ┌─────────────────────────────────────────────────────────┐
 │ HEADER (plaintext JSON)                                  │
 │   magic, version, KDF params, per-vault salt             │
@@ -43,6 +43,10 @@ myvault.vault
 - **Recovery key** — an optional high-entropy Crockford Base32 key that independently
   unlocks the vault if you forget the password. Shown once at creation; stored only as
   a salted scrypt-wrapped copy of the MEK plus a verification hash.
+- **Extension is cosmetic** — `.svlt` exists only to name the file and claim a file
+  association. Identification is by magic bytes, so any filename works: a vault
+  renamed to `.vault` (this app's pre-1.0 suffix) or to no extension at all opens
+  and closes normally. There is no migration, and there is no need for one.
 - **Self-contained** — every parameter needed to decrypt lives inside the file. No
   registry, no side files, no external state.
 
@@ -81,7 +85,7 @@ Run via the launcher (`./shadow-bit`) or `node dist/cli/index.js`.
 
 # ... add / edit files in that folder ...
 
-# Close → re-encrypt the folder back into secret.vault, wipe temp dir
+# Close → re-encrypt the folder back into secret.svlt, wipe temp dir
 ./shadow-bit close secret
 
 # Throw away unsaved changes (wipes temp dir without saving)
@@ -200,7 +204,7 @@ the hidden volume exists.
 import { createHiddenVault, openHiddenVolume } from "./src/core/hidden";
 
 createHiddenVault({
-  vaultPath: "container.vault",
+  vaultPath: "container.svlt",
   outerPassword: "decoy-password",
   hiddenPassword: "real-password",
   totalSize: 64 * 1024 * 1024,   // 64 MiB fixed-size container
@@ -209,11 +213,11 @@ createHiddenVault({
 });
 
 // Open the real data
-const { header, payload } = openHiddenVolume("container.vault", "real-password");
+const { header, payload } = openHiddenVolume("container.svlt", "real-password");
 ```
 
 Both volumes read through the ordinary code path: `shadow-bit open
-container.vault` with the duress password unpacks the decoy files normally, and
+container.svlt` with the duress password unpacks the decoy files normally, and
 `shadow-bit info` reads the outer header. The container declares its outer
 payload length so the padding and hidden volume that follow it do not corrupt the
 outer ciphertext.
@@ -256,7 +260,7 @@ npm run gui:dev    # launch without rebuilding
 
 | Tab             | What it does                                                                                                                                                                                        |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Open**        | Browse for a `.vault` file, enter password + optional keyfile, open. Working folder launches automatically in Finder/Explorer.                                                                      |
+| **Open**        | Browse for a `.svlt` file, enter password + optional keyfile, open. Working folder launches automatically in Finder/Explorer.                                                                       |
 | **Create**      | Choose a save path, set a password, optionally seed from a folder, generate a recovery key. **Advanced options** (collapsed): cipher algorithm, keyfile second factor, paranoid mode.               |
 | **Manage**      | View info, change password, recover with recovery key, regenerate or remove recovery key, delete or shred the vault.                                                                                |
 | **Open Vaults** | All active sessions. Drag files/folders onto the drop zone, or use **Add Files…**. Enter password → **Close & Save** or **Discard**. Keyfiles are remembered from open time — no need to re-browse. |
@@ -300,7 +304,7 @@ src/
 ├── core/                  # shared, UI-agnostic cryptographic engine
 │   ├── crypto.ts          # scrypt KDF, AES-256-GCM, ChaCha20-Poly1305, MEK & recovery
 │   │                      # key helpers, keyfile processing, password strength estimation
-│   ├── container.ts       # .vault binary format (magic, header, payload, atomic writes)
+│   ├── container.ts       # .svlt binary format (magic, header, payload, atomic writes)
 │   ├── bundle.ts          # dependency-free directory ↔ buffer archive
 │   ├── vault.ts           # high-level orchestrator — all vault operations
 │   ├── sessions.ts        # open-vault tracking (encrypted; no secrets)

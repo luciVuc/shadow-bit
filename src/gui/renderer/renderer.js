@@ -567,7 +567,7 @@ try {
 }
 
 // ---------------------------------------------------------------------------
-// File association: handle .vault opened from OS
+// File association: handle .svlt (or legacy .vault) opened from OS
 // ---------------------------------------------------------------------------
 api.onOpenVaultFile((filePath) => {
   switchToTab(document.querySelector("[data-tab='open']"));
@@ -620,7 +620,7 @@ api.onAutoLocked(({ count, reason }) => {
 });
 
 // ---------------------------------------------------------------------------
-// Global drag-and-drop: drop a .vault file anywhere on the window
+// Global drag-and-drop: drop a .svlt file anywhere on the window
 // ---------------------------------------------------------------------------
 document.body.addEventListener("dragover", (e) => {
   e.preventDefault();
@@ -633,7 +633,7 @@ document.body.addEventListener("drop", (e) => {
   // process the same question twice.
   const vaultPath = [...e.dataTransfer.files]
     .map((f) => api.pathForFile(f))
-    .find((p) => p && p.endsWith(".vault"));
+    .find((p) => p && /\.(svlt|vault)$/i.test(p));
   if (vaultPath) {
     switchToTab(document.querySelector("[data-tab='open']"));
     $("open-path").value = vaultPath;
@@ -1138,7 +1138,7 @@ async function refreshSessions() {
     dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
     dz.addEventListener("drop", async (ev) => {
       ev.preventDefault();
-      ev.stopPropagation(); // prevent global .vault drop handler
+      ev.stopPropagation(); // prevent global .svlt drop handler
       dz.classList.remove("drag");
       const paths = [...ev.dataTransfer.files].map((f) => api.pathForFile(f));
       await addPaths(paths);
