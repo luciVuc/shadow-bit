@@ -20,8 +20,8 @@
 // declares `payloadLen` pins the boundary, which is what a hidden-volume
 // container needs. See `payloadEnd` below.
 //
-// NOTE: this magic changed with the 2.1 rebrand. Containers written by earlier
-// builds are rejected rather than read — the format is a clean break, not a
+// NOTE: this magic changed in the pre-1.0 rebrand. Containers written by
+// earlier builds are rejected rather than read — the format is a clean break, not a
 // compatibility shim.
 
 import * as fs from "fs";

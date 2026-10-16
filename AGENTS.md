@@ -77,6 +77,41 @@ When you bump a constant that a test asserts against (e.g. `CURRENT_VERSION`),
 have the test import it rather than hardcoding the number — a hardcoded
 version assertion is what let the GUI suite go stale for several releases.
 
+**One derivation for the app version, shared by the writer and the checker.**
+`scripts/version-literals.js` is the only place that knows which files carry a
+hand-maintained version literal (docs site `meta.version`, the
+`docs/index.html` badge, the AppImage/NSIS names in `docs/data.js` and
+`QUICKSTART.md`) and what shape each one takes. `npm version <a.b.c>` runs
+`scripts/bump-version.js` via npm's `version` lifecycle, which imports that
+module; so does the consistency assertion in `e2e/cli.test.ts`. Do not
+re-derive the rules in a second place — a script and a test that spell out the
+rules separately will drift from each other while both look correct, which is
+the bug this replaced.
+
+- A site is defined by the literal text **immediately before and after** the
+  number (`before` / `after`), and `transform` fills the gap. That is not
+  decoration: the badge is `v1.0` while everything else is `1.0.0`, so a
+  find-and-replace over bare version-shaped text either misses it or mangles
+  it. Anchoring on both sides also makes "did I find it?" exact — a vanished
+  anchor is a reported failure, not a silent no-op that looks like success.
+- `transform` returns the version portion **only**. The badge's leading `v` is
+  part of its `before`, so returning `v1.0` would emit `vv1.0`. Scan and
+  compare together (`scanLiterals` carries each site's `want`) so a site
+  cannot be found by one rule and judged by another.
+- `assertVersionLike` refuses to rewrite anything that is not version-shaped.
+  These are anchors into live docs text; a mis-anchored regex would otherwise
+  rewrite arbitrary content silently.
+- Nothing here touches `src/core/container.ts`. `CURRENT_VERSION` is the
+  container format version, not the app version, and `npm version` must never
+  move it.
+- `node scripts/bump-version.js --check` (also `npm run check-version`) is a
+  no-write drift check for CI; it exits 1 and names file:line.
+
+The old test also silently missed `ShadowBit Setup <version>.exe` in
+`QUICKSTART.md` — it only scanned for the AppImage name. The shared module lists
+every site explicitly, so a site cannot go unchecked because someone forgot to
+extend a regex.
+
 There is no linting config and no typecheck-only script; `npm run build` runs
 `tsc` and is the typecheck.
 
@@ -110,21 +145,21 @@ There is no linting config and no typecheck-only script; `npm run build` runs
 
 - **The container extension is `.svlt`, and it is cosmetic — never a format input.** It was `.vault` until the 1.0.0 rebrand; `VAULT_EXT`/`LEGACY_VAULT_EXT`/`VAULT_EXTS`/`hasVaultExt` in `src/core/container.ts` are the single source of truth, and every frontend must read them rather than hardcoding a suffix. `.vault` was dropped because it is claimed by several unrelated tools (HashiCorp, Bitwarden), so the OS picker groups every vault family's files under one filter and double-click opens someone else's app; `.vlt` was rejected because it is _WinVault's_ container extension and also VLC's skin extension. `.svlt` has no known association. Identification is by MAGIC bytes, so `openVault` accepts any suffix and a pre-rename `.vault` opens, renames, and closes unchanged — there is no migration and there must never be one. `fileAssociations` in package.json registers **only** `svlt`: claiming `.vault` system-wide would recreate the exact collision the rename exists to avoid.
 
-- **The 2.1 rebrand is a hard format break.** The container magic, the recovery-key domain-separation strings, the config directory, and the environment variables were all renamed for the rebrand. `.vault` files written by pre-2.1 builds are rejected as corrupt, and there is no state migration. Don't reintroduce a compat shim unless a migration is requested; if it is, gate it on the magic bytes, not the version.
-- **Don't confuse "no pre-2.1 read path" with "v1 is unsupported."** Those are different things and conflating them produces false guarantees. `MIN_SUPPORTED_VERSION = 1`, so v1, v2, and v3 containers all parse and open; what pre-2.1 files lack is the _current magic_, so they fail the magic check, not the version check. A v1 container written by a 2.1+ build carries the new magic and still opens.
+- **The pre-1.0 rebrand is a hard format break.** The container magic, the recovery-key domain-separation strings, the config directory, and the environment variables were all renamed for the rebrand. `.vault` files written by pre-1.0 builds are rejected as corrupt, and there is no state migration. Don't reintroduce a compat shim unless a migration is requested; if it is, gate it on the magic bytes, not the version.
+- **Don't confuse "no pre-1.0 read path" with "v1 is unsupported."** Those are different things and conflating them produces false guarantees. `MIN_SUPPORTED_VERSION = 1`, so v1, v2, and v3 containers all parse and open; what pre-1.0 files lack is the _current magic_, so they fail the magic check, not the version check. A v1 container written by a 1.0+ build carries the new magic and still opens.
 - Password change does **not** re-encrypt the payload — only the MEK is re-wrapped. This is intentional and fast, but means the ciphertext is unchanged. `changePassword`/`recoverVault` do re-wrap the MEK at the current default scrypt cost (`DEFAULT_KDF_PARAMS`, now N=2^17) and record `kdfParams` in the header, so a legacy vault's password change/recovery also upgrades its KDF cost.
 - Secure erase is best-effort: SSDs, APFS, and copy-on-write FSes may retain old data. This is documented, not a bug.
 - **Secure erase must never follow a symlink.** `secureEraseFile` used `statSync`/`openSync`, both of which resolve links, so erasing a working folder that contained a link overwrote the _link's target_ with random bytes — irreversibly destroying a file that was never in the vault. It now `lstat`s: a link is unlinked, its target untouched, and `secureEraseDir` uses `withFileTypes` so it never recurses through a linked directory. This runs on close, discard, delete and GUI auto-lock, so it is reachable without anyone thinking about symlinks.
 - Sessions file persists across CLI runs. If you see "vault is not open" errors, check for stale sessions.
 - The `shadow-bit` shell script at the repo root is a convenience launcher for the CLI. It prefers `node_modules/.bin/tsx src/cli/index.ts` (no build needed) and falls back to `node dist/cli/index.js`.
-- **The app version and the container format version are unrelated numbers, and both appear as "Version".** `package.json` `version` is the shipped app (`1.0.0`); `CURRENT_VERSION` in `src/core/container.ts` is the `.vault` file format (`3`). They were both `3.0.0` at one point, which is how `shadow-bit --version` came to disagree with `package.json`. Do not "fix" one by copying the other.
+- **The app version and the container format version are unrelated numbers, and both appear as "Version".** `package.json` `version` is the shipped app (`1.0.0`); `CURRENT_VERSION` in `src/core/container.ts` is the `.vault` file format (`3`). They were the same number in an earlier build, which is how `shadow-bit --version` came to disagree with `package.json` — and how `npm version` nearly overwrote the format version. Do not "fix" one by copying the other.
   - The app version is `package.json`, read at runtime — **never hardcoded**. The CLI's `readAppVersion()` parses `package.json` from `__dirname/../..`, which resolves correctly from `src/cli/` (tsx) and `dist/cli/` (compiled) alike. It cannot be a static `import` because `rootDir` is `src/` and a JSON import from outside it fails the build.
   - `docs/` must run over `file://`, so it cannot read `package.json` — `meta.version` in `docs/data.js`, the `version-badge` in `docs/index.html`, the `ShadowBit-<version>.AppImage` install snippets, and the `ShadowBit Setup <version>.exe` Windows snippet (electron-builder's NSIS name includes the version) are literals kept in step by the version-consistency test in `e2e/cli.test.ts`. Bump `package.json` and that test tells you which of them to update.
   - `vault info` prints the **container** version; `e2e/cli.test.ts` asserts against `CURRENT_VERSION` (imported, not hardcoded) for that output, not against the app version.
 - Container format version is now **3**. `CURRENT_VERSION = 3` in `src/core/container.ts` is the single source of truth — import it rather than hardcoding it.
   - **v3** adds the authenticated header (`header.headerMac`: HMAC-SHA256 over the canonical header JSON, keyed by a HKDF-derived HAK), the keyfile flag (`keyfileRequired`), and cipher agility (`header.cipher`, default `aes-256-gcm`). Every write path goes through `attachHeaderMac`, so all re-writes produce a valid MAC. `verifyHeaderMac` runs on open and rejects header tampering (KDF downgrade, salt swap).
   - **v2** introduced the salted scrypt recovery escrow (`header.recovery.salt`).
-  - **v1** used an unsalted single-round SHA-256 recovery derivation. The code path (`deriveKeyFromRecovery` in `crypto.ts`) is retained. Pre-2.1 files carry the old magic and are rejected, but a v1 container written by a 2.1+ build _does_ reach it — so `upgradeRecoveryEscrow` is live, not vestigial. `upgradeRecoveryEscrow(vaultPath, recoveryKey)` re-salts a legacy v1 escrow in place (bumps the version, keeps the SAME recovery key valid) and is exposed as `recovery-key --upgrade [--recovery-key <key>]`.
+  - **v1** used an unsalted single-round SHA-256 recovery derivation. The code path (`deriveKeyFromRecovery` in `crypto.ts`) is retained. Pre-1.0 files carry the old magic and are rejected, but a v1 container written by a 1.0+ build _does_ reach it — so `upgradeRecoveryEscrow` is live, not vestigial. `upgradeRecoveryEscrow(vaultPath, recoveryKey)` re-salts a legacy v1 escrow in place (bumps the version, keeps the SAME recovery key valid) and is exposed as `recovery-key --upgrade [--recovery-key <key>]`.
 - `maybeBumpVersion` is the only honest version-bump: it claims the current version only once nothing v1-style remains, because a header cannot claim v2/v3 while still carrying an unsalted v1 escrow. **Every** write path that rewrites the header WITHOUT replacing the escrow goes through it — `closeVault`, `changePassword`, `recoverVault`, `removeRecoveryKey`, `setMeta`. (`closeVault` used to assign `CURRENT_VERSION` unconditionally, which stamped v3 over a v1-style escrow it had just copied through untouched; it now uses `maybeBumpVersion`.) The only two that assign it directly are `regenerateRecoveryKey` and `upgradeRecoveryEscrow`, and that is correct there: both replace the escrow with a freshly salted one in the same call, so nothing v1-style can survive. **A new write path must go through `maybeBumpVersion` unless it replaces the escrow.**
 - The whole payload is buffered in memory and the container is capped at `MAX_PAYLOAD_SIZE` (1.5 GiB) in `src/core/bundle.ts`. There is no streaming; a ~1 GB vault needs roughly 2 GB of RAM.
 - That cap bounds the **compressed** size only, so `decompressBundle` must pass `maxOutputLength` to `zlib.inflateSync`. A legitimately compressible vault (a sparse image, a log of zeros) expands by three orders of magnitude; without the cap, opening it asks Node for tens of gigabytes in one allocation and the process dies with a heap OOM instead of an error naming the vault. Over-large expansion is reported separately from corruption, because the vault is fine.

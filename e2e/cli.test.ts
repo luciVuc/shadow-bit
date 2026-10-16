@@ -16,6 +16,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { CURRENT_VERSION, readHeader } from "../src/core/container";
+// CommonJS module shared with scripts/bump-version.js — see that file.
+import { findStale } from "../scripts/version-literals";
 
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "shadowbit-cli-e2e-"));
 const CLI = path.resolve(__dirname, "../src/cli/index.ts");
@@ -108,44 +110,16 @@ test("CLI e2e: --version matches package.json, and the docs site agrees", async 
   );
 
   // The docs site cannot import package.json (it must run over file://), so its
-  // version is a literal that has to be kept in step by hand — assert that.
-  const dataJs = fs.readFileSync(
-    path.resolve(__dirname, "../docs/data.js"),
-    "utf8",
+  // version is a literal. Rather than restate each rule here, ask the same
+  // module `npm version` uses to write them — a second derivation in this file
+  // could disagree with the script and pass while the docs are stale.
+  const stale = findStale(pkg.version);
+  assert.deepEqual(
+    stale.map((s) => `${s.file}:${s.line} ${s.label} is "${s.current}"`),
+    [],
+    `version literals are out of sync with package.json ${pkg.version}; ` +
+      `run \`node scripts/bump-version.js\``,
   );
-  assert.match(
-    dataJs,
-    new RegExp(`version: "${pkg.version.replace(/\./g, "\\.")}"`),
-    "docs/data.js meta.version is stale",
-  );
-
-  const indexHtml = fs.readFileSync(
-    path.resolve(__dirname, "../docs/index.html"),
-    "utf8",
-  );
-  const badge = indexHtml.match(/class="version-badge">([^<]+)</);
-  assert.ok(badge, "version badge missing from docs/index.html");
-  const [major, minor] = pkg.version.split(".");
-  assert.equal(
-    badge[1].trim(),
-    `v${major}.${minor}`,
-    "docs/index.html version badge is stale",
-  );
-
-  // The AppImage filename embeds the version, so the install snippets must
-  // match too — a stale one hands the user a path that does not exist.
-  for (const file of ["../docs/data.js", "../QUICKSTART.md"]) {
-    const body = fs.readFileSync(path.resolve(__dirname, file), "utf8");
-    const stale = body.match(/ShadowBit-(\d+\.\d+\.\d+)\.AppImage/g);
-    if (!stale) continue;
-    for (const m of stale) {
-      assert.equal(
-        m,
-        `ShadowBit-${pkg.version}.AppImage`,
-        `${file} references a stale AppImage name`,
-      );
-    }
-  }
 });
 
 // ---------------------------------------------------------------------------

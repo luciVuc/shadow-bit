@@ -713,7 +713,7 @@ window.APP_DATA = {
         {
           q: "“Not a valid vault file (bad magic bytes).”",
           a: [
-            "Either the file is not a ShadowBit vault, or it was written by a build from before the 2.1 rebrand. Those older files carry a different magic and are rejected as corrupt — there is no compatibility path, and none is planned. Recover such a vault with the version of ShadowBit that created it, then re-save it.",
+            "Either the file is not a ShadowBit vault, or it was written by an older build of ShadowBit. Those older files carry a different magic and are rejected as corrupt — there is no compatibility path, and none is planned. Recover such a vault with the version of ShadowBit that created it, then re-save it.",
             "A vault written by any current build starts with the current magic, and every container of format version 1 to 3 parses and opens. (The container format version and the app version are unrelated numbers — see the CLI reference.)",
           ],
         },

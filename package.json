@@ -27,6 +27,8 @@
     "prebuild": "npm run icons",
     "build": "node ./node_modules/typescript/bin/tsc && npm run copy-assets",
     "copy-assets": "node scripts/copy-assets.js",
+    "version": "node scripts/bump-version.js",
+    "check-version": "node scripts/bump-version.js --check",
     "test": "node --import tsx --test src/test/*.test.ts",
     "test:gui": "node --import tsx --test e2e/smoke.test.ts",
     "test:cli-e2e": "node --import tsx --test e2e/cli.test.ts",

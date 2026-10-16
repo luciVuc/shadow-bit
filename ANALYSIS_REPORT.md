@@ -21,7 +21,7 @@
 > argument and failed closed, making a keyfile vault impossible to delete.
 
 **Date:** 2025-07-16  
-**Version Analyzed:** 3.0.0 (container format v2)  
+**Version Analyzed:** a pre-1.0 build (container format v2)  
 **Codebase:** ~4,139 lines across 34 source files  
 **Status at time of audit:** Build ✅ · Tests 27/27 ✅ · npm audit 0 vulnerabilities ✅
 

@@ -405,8 +405,8 @@ version, because claiming v2 would assert a salted escrow it does not have.
 Re-salt it with `shadow-bit recovery-key <vault> --upgrade` (the recovery key is
 prompted **visibly** — it is 40 Base32 characters in fixed groups, and a masked
 field hides exactly the one mistyped character that makes recovery fail).
-Pre-2.1 vaults carry a different magic and are rejected as corrupt (no legacy
-compat path).
+Vaults written by a pre-1.0 build carry a different magic and are rejected as
+corrupt (no legacy compat path).
 
 ---
 
