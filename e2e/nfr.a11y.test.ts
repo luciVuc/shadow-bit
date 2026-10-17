@@ -839,24 +839,35 @@ describe("preferences", () => {
   // (bad selector, throw-and-return-empty) would make the test above pass for
   // the wrong reason.
   test("the motion probe detects motion when reduced-motion is off", async () => {
-    const offenders = await h.page.evaluate(() => {
-      const out: string[] = [];
-      document.querySelectorAll<HTMLElement>("*").forEach((el) => {
-        const cs = getComputedStyle(el);
-        if (
-          (parseFloat(cs.animationDuration) || 0) > 0.01 ||
-          (parseFloat(cs.transitionDuration) || 0) > 0.01
-        ) {
-          out.push(`${el.tagName}.${el.className}`);
-        }
+    // Emulate the preference OFF; do NOT clear the override. Clearing it means
+    // "whatever the host OS reports", and a host with Reduce Motion enabled —
+    // which the macOS CI runner has — answers `reduce`. The probe then correctly
+    // found nothing, and this guard failed for a reason that had nothing to do
+    // with the probe. The stylesheet's reduce block is real, so "no motion" here
+    // is indistinguishable from "broken probe" unless the preference is stated.
+    await h.page.emulateMedia({ reducedMotion: "no-preference" });
+    try {
+      const offenders = await h.page.evaluate(() => {
+        const out: string[] = [];
+        document.querySelectorAll<HTMLElement>("*").forEach((el) => {
+          const cs = getComputedStyle(el);
+          if (
+            (parseFloat(cs.animationDuration) || 0) > 0.01 ||
+            (parseFloat(cs.transitionDuration) || 0) > 0.01
+          ) {
+            out.push(`${el.tagName}.${el.className}`);
+          }
+        });
+        return out;
       });
-      return out;
-    });
-    assert.ok(
-      offenders.length > 0,
-      "probe found no motion with reduced-motion off — the assertion above " +
-        "would pass vacuously",
-    );
+      assert.ok(
+        offenders.length > 0,
+        "probe found no motion with reduced-motion off — the assertion above " +
+          "would pass vacuously",
+      );
+    } finally {
+      await h.page.emulateMedia({ reducedMotion: null });
+    }
   });
 
   test("forced-colors mode keeps a visible focus indicator", async () => {

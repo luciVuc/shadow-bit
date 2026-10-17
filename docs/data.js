@@ -5,7 +5,7 @@ window.APP_DATA = {
     title: "ShadowBit",
     tagline: "One encrypted file. One password. No accounts, no cloud.",
     subTagline: "Lock a folder into a single .svlt file and send it anywhere.",
-    version: "1.1.2",
+    version: "1.1.3",
     github: "https://github.com/lucianvuc/shadow-bit",
     license: "MIT",
   },
@@ -165,7 +165,7 @@ window.APP_DATA = {
         },
         {
           title: "Build the Windows installer",
-          code: "npm run package:win\n# → release\\ShadowBit Setup 1.1.2.exe",
+          code: "npm run package:win\n# → release\\ShadowBit Setup 1.1.3.exe",
         },
         {
           title: "CLI without packaging",
@@ -189,7 +189,7 @@ window.APP_DATA = {
         },
         {
           title: "Build AppImage",
-          code: 'npm run package:linux\nchmod +x "release/ShadowBit-1.1.2.AppImage"\n./release/"ShadowBit-1.1.2.AppImage"',
+          code: 'npm run package:linux\nchmod +x "release/ShadowBit-1.1.3.AppImage"\n./release/"ShadowBit-1.1.3.AppImage"',
         },
         {
           title: "CLI (global install)",
