@@ -1026,9 +1026,15 @@ describe("ShadowBit application menu", () => {
       snapshot["View"].some((i) => i.label === "Appearance" && i.hasSubmenu),
       "View menu must have an Appearance submenu",
     );
+    // Match on ROLE, not label. These items are declared as `{ role: "close" }`,
+    // and Electron fills in the displayed label from its own per-platform
+    // strings — so a label assertion is a test of Electron's macOS menu text,
+    // not of this app. It passed on Linux ("Close") and failed on macOS, where
+    // the same role is labelled differently. The role is what the template
+    // actually pins, and it is what makes the item work.
     assert.ok(
-      snapshot["Window"].some((i) => i.label === "Close"),
-      "Window menu must have Close",
+      snapshot["Window"].some((i) => i.role === "close"),
+      "Window menu must have a close item",
     );
 
     // Settings sits in the app menu on macOS, at the bottom of File elsewhere.

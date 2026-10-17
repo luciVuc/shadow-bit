@@ -76,8 +76,15 @@ jobs:
         run: npm run build
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
+      # The spec reporter, not the default TAP. TAP buries an assertion's
+      # `message` inside an `error: |-` block, and node:test prints a failed
+      # `before()` hook once per top-level suite at the very END of the stream —
+      # so a failure can read as a wall of `cancelledByParent` with the
+      # identifying message nowhere near the test it belongs to. spec names the
+      # assertion inline, which is the difference between a 5-minute triage and
+      # an instant one.
       - name: Run GUI smoke tests
-        run: npm run test:gui
+        run: npm run test:gui:spec
         env:
           SHADOWBIT_E2E_TEST: "1"
         timeout-minutes: 5
