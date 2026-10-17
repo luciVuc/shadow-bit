@@ -31,6 +31,7 @@
     "check-version": "node scripts/bump-version.js --check",
     "test": "node --import tsx --test src/test/*.test.ts",
     "test:gui": "node --import tsx --test e2e/smoke.test.ts",
+    "test:gui:headless": "SHADOWBIT_HEADLESS=1 node --import tsx --test e2e/smoke.test.ts",
     "test:cli-e2e": "node --import tsx --test e2e/cli.test.ts",
     "test:a11y": "node --import tsx --test e2e/nfr.a11y.test.ts",
     "test:responsive": "node --import tsx --test e2e/nfr.responsive.test.ts",

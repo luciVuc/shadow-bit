@@ -35,6 +35,31 @@ jobs:
       - name: Run CLI end-to-end tests
         run: npm run test:cli-e2e
 
+  gui-headless:
+    name: GUI smoke (headless Linux)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      # Electron has no working headless mode on Linux; the suite provisions a
+      # virtual X server itself (see e2e/display.ts), so this job proves that
+      # path rather than relying on a runner image that happens to have one.
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Run GUI smoke tests (forced headless)
+        run: npm run test:gui:headless
+        env:
+          SHADOWBIT_E2E_TEST: "1"
+        timeout-minutes: 10
+
   gui-smoke:
     name: GUI + NFR tests (Electron + Playwright)
     runs-on: macos-latest

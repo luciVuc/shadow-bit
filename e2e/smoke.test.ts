@@ -14,6 +14,7 @@ import { _electron as electron, ElectronApplication, Page } from "playwright";
 import type { BrowserWindow } from "electron";
 import { CURRENT_VERSION } from "../src/core/container";
 import { createVault } from "../src/core/vault";
+import { ensureDisplay, type Display } from "./display";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -34,15 +35,37 @@ const UI_TIMEOUT = 8_000;
 // ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
+// Electron has no working headless mode on Linux, so when there is no display
+// we start a virtual X server for the duration of the run. See e2e/display.ts
+// for why that is not avoidable with flags.
+let display: Display | null = null;
+
 before(async () => {
+  // node:test reports a failed before() hook once per top-level suite, at the
+  // very end of the TAP stream — so print the reason here, first, or CI triage
+  // starts by reading 26 "cancelledByParent" failures instead of the cause.
+  try {
+    display = await ensureDisplay();
+  } catch (e) {
+    console.error(
+      `\n[smoke] cannot start the GUI suite: ${(e as Error).message}\n`,
+    );
+    throw e;
+  }
+
+  const env: Record<string, string> = {
+    ...process.env,
+    SHADOWBIT_CONFIG_DIR: path.join(tmpDir, "cfg"),
+    SHADOWBIT_E2E_TEST: "1", // suppress shell.openPath so no Finder windows appear
+  } as Record<string, string>;
+  // Only override when we provisioned one: passing DISPLAY="" would be worse
+  // than leaving the inherited value alone.
+  if (display.ours) env.DISPLAY = display.display;
+
   app = await electron.launch({
     args: [DIST_MAIN],
-    env: {
-      ...process.env,
-      SHADOWBIT_CONFIG_DIR: path.join(tmpDir, "cfg"),
-      SHADOWBIT_E2E_TEST: "1", // suppress shell.openPath so no Finder windows appear
-    },
-    timeout: 20_000,
+    env,
+    timeout: 60_000,
   });
   page = await app.firstWindow();
   await page.waitForLoadState("domcontentloaded");
@@ -54,6 +77,7 @@ after(async () => {
   } catch {
     /* ignore if already closed */
   }
+  display?.cleanup();
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 

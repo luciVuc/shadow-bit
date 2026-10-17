@@ -25,6 +25,7 @@ npm run gui:dev        # launch Electron without rebuilding
 npm test              # node:test suite in src/test/ (security + round-trip) — 99 tests
 npm run test:cli-e2e  # real-subprocess CLI coverage (e2e/cli.test.ts) — 36 tests
 npm run test:gui      # Electron + Playwright GUI tests (e2e/smoke.test.ts) — 26 tests
+npm run test:gui:headless  # same suite, forced virtual display (Xvfb)
 npm run test:a11y     # WCAG 2.2 AA + keyboard/focus/target-size (e2e/nfr.a11y.test.ts) — 38 tests
 npm run test:responsive # XS/SM/MD/LG/XL reflow (e2e/nfr.responsive.test.ts) — 16 tests
 npm run test:perf     # asset budget + interaction cost (e2e/nfr.performance.test.ts) — 7 tests
@@ -34,9 +35,28 @@ npm run verify        # build + all of the above. Use this before shipping.
 ```
 
 `npm test` and `npm run test:gui` are deliberately separate: the GUI suite
-launches a real Electron window and needs a display, so it cannot run on a
-headless Linux CI box. **Prefer `npm run verify`** so the GUI suite is never
-silently skipped.
+launches a real Electron window, which is the only coverage of the preload
+bridge, the worker thread, and the native dialogs. **Prefer `npm run verify`**
+so the GUI suite is never silently skipped.
+
+**Electron has no headless mode on Linux, and this is not fixable with flags.**
+`--headless=new` dies at `GtkStyleContext without a display connection`;
+`--ozone-platform=headless` SIGSEGVs before the first window — both verified
+against a _minimal_ BrowserWindow app, so neither is a ShadowBit bug. The only
+thing that works is a virtual X server, so `e2e/display.ts` provisions Xvfb when
+there is no `DISPLAY` and tears it down in `after()`. `npm run test:gui` auto-
+detects (no behaviour change on a desktop or on macOS CI);
+`npm run test:gui:headless` sets `SHADOWBIT_HEADLESS=1` to force the virtual
+display even when one exists, which is how the `gui-headless` CI job proves the
+path. Do not "optimise" the wait loop back into a blocking sleep: `Atomics.wait`
+starves the event loop, and the child's `error`/`exit` events are exactly what
+reports a missing binary — a blocking version fails by 10s timeout instead of
+ENOENT immediately.
+
+A failed `before()` hook is reported by node:test **once per top-level suite, at
+the end** of the TAP stream, so the 26 per-test `cancelledByParent` lines above
+it say nothing about the cause. `smoke.test.ts` therefore prints the real reason
+to stderr before rethrowing. Keep that ordering.
 
 ```bash
 npm run package:dir   # then, on a machine with a display:
@@ -68,8 +88,9 @@ as false positives. `.checkbox input` is 20px and relies on that exception.
 
 CI (`.github/workflows/ci.yml`) runs on every push/PR: `build-and-test` on
 ubuntu-latest across a Node 20/22 matrix (core/CLI + CLI E2E), then a
-`gui-smoke` job on macos-latest that installs Playwright and runs the GUI smoke,
-a11y, responsive, and performance suites.
+`gui-headless` job on ubuntu-latest (apt-installs Xvfb and runs
+`test:gui:headless`), then a `gui-smoke` job on macos-latest that installs
+Playwright and runs the GUI smoke, a11y, responsive, and performance suites.
 `.github/workflows/release.yml` gates tag pushes on both jobs before packaging
 (it references the job id `gui-smoke` — keep it).
 
