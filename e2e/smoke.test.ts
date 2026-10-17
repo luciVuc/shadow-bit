@@ -346,16 +346,13 @@ describe("ShadowBit GUI smoke tests", () => {
     await switchTab("sessions");
     await page.waitForSelector(".session", { timeout: UI_TIMEOUT });
 
-    const sessionEl = await page.$(".session");
-    assert.ok(sessionEl, "a session card must exist");
-
-    const pwInput = await sessionEl!.$("input[type=password]");
-    assert.ok(pwInput, "password input in session card");
-    await pwInput!.fill(PASS);
-
-    const closeBtn = await sessionEl!.$(".btn-close");
-    assert.ok(closeBtn);
-    await closeBtn!.click();
+    // Locators, not ElementHandles: a handle resolved by `page.$` goes stale
+    // the moment the list is re-rendered, and every `$` on a detached node
+    // returns null. Locators re-resolve on each use, so this stays correct even
+    // if a refresh lands between the fill and the click.
+    const card = page.locator(".session").first();
+    await card.locator("input[type=password]").fill(PASS);
+    await card.locator(".btn-close").click();
     await waitForIdle();
 
     await page.waitForSelector("#toast:not(.hidden)", { timeout: UI_TIMEOUT });
@@ -614,18 +611,17 @@ describe("ShadowBit GUI smoke tests", () => {
     await switchTab("sessions");
     await page.waitForSelector(".session", { timeout: UI_TIMEOUT });
 
-    const sessionEl = await page.$(".session");
-    const workingDir = await sessionEl!.$eval(
-      ".wd",
-      (el: HTMLElement) => el.textContent?.trim() ?? "",
-    );
+    const card = page.locator(".session").first();
+    const workingDir = await card
+      .locator(".wd")
+      .textContent()
+      .then((t) => (t ?? "").trim());
     assert.ok(workingDir.length > 0, "session card must show a working dir");
-    const pwInput = await sessionEl!.$("input[type=password]");
-    await pwInput!.fill(NEW_PASS);
+    await card.locator("input[type=password]").fill(NEW_PASS);
 
     // Discard raises a native confirm dialog; answer YES via the E2E queue.
     await queueConfirmYes();
-    const discardBtn = await sessionEl!.$(".btn-discard");
+    const discardBtn = card.locator(".btn-discard");
     await discardBtn!.click();
     await waitForIdle();
 
@@ -662,16 +658,16 @@ describe("ShadowBit GUI smoke tests", () => {
     await switchTab("sessions");
     await page.waitForSelector(".session", { timeout: UI_TIMEOUT });
 
-    const sessionEl = (await page.$(".session"))!;
-    const workingDir = await sessionEl.$eval(
-      ".wd",
-      (el: HTMLElement) => el.textContent?.trim() ?? "",
-    );
+    const workingDir = await page
+      .locator(".session .wd")
+      .first()
+      .textContent()
+      .then((t) => (t ?? "").trim());
     // A file the user "added" to the working folder.
     const target = path.join(workingDir, "notes.txt");
     fs.writeFileSync(target, "original contents");
 
-    await (await page.$(".btn-tree"))!.click();
+    await page.locator(".btn-tree").first().click();
     await page.waitForSelector(".file-tree .tree-item", {
       timeout: UI_TIMEOUT,
     });
@@ -779,11 +775,9 @@ describe("ShadowBit GUI smoke tests", () => {
     await switchTab("sessions");
     const hasSessions = await page.isVisible(".session");
     if (hasSessions) {
-      const sessionEl = await page.$(".session");
-      const pwInput = await sessionEl!.$("input[type=password]");
-      await pwInput!.fill(NEW_PASS);
-      const closeBtn = await sessionEl!.$(".btn-close");
-      await closeBtn!.click();
+      const card = page.locator(".session").first();
+      await card.locator("input[type=password]").fill(NEW_PASS);
+      await card.locator(".btn-close").click();
       await waitForIdle();
     }
 
@@ -998,12 +992,9 @@ describe("ShadowBit application menu", () => {
   async function closeFirstSession(): Promise<void> {
     await switchTab("sessions");
     await page.waitForSelector(".session", { timeout: UI_TIMEOUT });
-    const card = await page.$(".session");
-    assert.ok(card, "a session card must exist");
-    const pw = await card!.$("input[type=password]");
-    assert.ok(pw, "password input in session card");
-    await pw!.fill(PASS);
-    await card!.$eval(".btn-close", (el: HTMLElement) => el.click());
+    const card = page.locator(".session").first();
+    await card.locator("input[type=password]").fill(PASS);
+    await card.locator(".btn-close").click();
     await waitForIdle();
     await page.waitForFunction(
       () => document.querySelectorAll(".session").length === 0,

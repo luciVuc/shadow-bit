@@ -1059,8 +1059,11 @@ $("del-go").onclick = async () => {
 // SESSIONS tab
 // ---------------------------------------------------------------------------
 async function refreshSessions() {
-  const list = $("sessions-list");
-  list.innerHTML = "";
+  // Fetch BEFORE touching the DOM. Clearing the list first left it empty for
+  // the whole round-trip, so anything that read the list during that window saw
+  // nothing — and rebuilding it unconditionally threw away whatever the user
+  // had already typed into a card, since merely switching to this tab triggers
+  // a refresh.
   let sessions = [];
   try {
     sessions = result(await api.sessions());
@@ -1070,6 +1073,18 @@ async function refreshSessions() {
   // Keep the main process in sync so File > Lock All Vaults is only enabled
   // when there is something to lock.
   api.setOpenVaultCount(sessions.length);
+
+  const list = $("sessions-list");
+  // Keyed on what the card actually displays, not on the whole session object:
+  // a field that changes without changing the visible content must not force a
+  // rebuild, or the same clobbering comes back through another door.
+  const sig = JSON.stringify(
+    sessions.map((s) => [s.vaultPath, s.workingDir]),
+  );
+  if (list.dataset.sig === sig) return;
+  list.dataset.sig = sig;
+
+  list.innerHTML = "";
   if (sessions.length === 0) {
     list.innerHTML = '<p class="hint">No open vaults.</p>';
     return;

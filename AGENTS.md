@@ -160,6 +160,19 @@ There is no linting config and no typecheck-only script; `npm run build` runs
 - **Never trust a path that came from the renderer.** `files:delete` used to `rmSync --recursive` whatever directory the renderer named, so any script running in the renderer could delete any directory the user could reach, and `files:list` could walk the whole filesystem. All three now go through `vault.listWorkingDir` / `deleteFromWorkingDir` / `renameInWorkingDir`, which call `resolveOpenWorkingDir` to match the folder against the session registry and then operate on the _registry's_ path, never the caller's. Add the same check to anything new that takes a path from the renderer.
 - **Paranoid mode warns about metadata, it does not forbid it.** `createVault({paranoid})` strips `meta` and pins header timestamps to epoch. `setMeta` on such a vault _succeeds_ and returns `{ vaultPath, paranoid: true }` — the CLI prints a warning and the GUI shows a persistent one. Refusing was tried and reverted: it made a mode the user chose years ago a one-way door, and wanting a description on a paranoid vault is not a mistake. What must never happen is a silent success, because the mode exists to keep optional plaintext out of a header anyone can read. `isParanoidHeader` identifies such a vault by its epoch `createdAt` — the same signal `touchModified` uses — rather than by a flag that could disagree with the timestamps it describes. If you add a frontend, honour `paranoid` in the result; the core test and the CLI E2E test both assert it.
 - **`sys:copySecret` must never be made unconditional.** It compares the clipboard against the value it wrote and only clears on a match, so "the user copied something else in the meantime" is not data loss. The recovery-key modal used to call `copy("")` on acknowledgement — wiping whatever was there — and now does not; the 30 s timer it duplicated is the only clear.
+- **The sessions list must not be rebuilt when nothing changed, and must not be
+  emptied before the data arrives.** `refreshSessions` used to set
+  `list.innerHTML = ""` and _then_ await `api.sessions()`, so the list was empty
+  for the whole round-trip, and it rebuilt unconditionally — meaning merely
+  switching to the Sessions tab wiped any password the user had typed into a
+  card. It now fetches first, then rebuilds only when a signature over the
+  displayed fields (vaultPath, workingDir) actually changes; the count pushed to
+  the main process is still sent every time, because that drives File > Lock All
+  Vaults independently of the DOM. This is what makes the DOM stable enough for
+  a test to hold a handle across it — but tests should use locators, not
+  `page.$` handles, anyway: `$` on a detached node returns null, which is how a
+  slow runner failed a `assert.ok` with no other symptom.
+
 - **A live working directory is a moving target.** `walk()`, `listWorkingDir` and `copyDirNoSymlinks` each `lstat` an entry that may have been deleted between `readdir` and the stat, because the user is still editing the folder. All three swallow that one failure and continue; the alternative is a `close` or a file-browser listing that fails wholesale over a file the user deleted a second ago.
 
 ## Gotchas
