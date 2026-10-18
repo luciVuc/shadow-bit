@@ -65,6 +65,11 @@ npm run build      # tsc → dist/, then copies GUI static assets
 
 Requires Node.js 20+.
 
+**End users do not need any of this.** The packaged desktop app is downloaded
+from the [website](https://shadowbit.app) (`docs/index.html#install`), and the
+CLI installs with `npm install -g shadow-bit`. Everything below this line is
+contributor documentation.
+
 ---
 
 ## CLI usage
@@ -294,6 +299,74 @@ npm run package:dir      # unpacked app folder (fastest, for testing)
 
 Output goes to `release/`. macOS builds are unsigned by default; for
 distribution outside your own machine you'll need a Developer ID certificate.
+
+The artifact names produced here are the exact names the website's download
+buttons link to, so the two must agree:
+
+| Platform              | Artifact                                                         |
+| --------------------- | ---------------------------------------------------------------- |
+| macOS (Apple Silicon) | `ShadowBit-<version>-arm64.dmg`                                  |
+| macOS (Intel)         | `ShadowBit-<version>-x64.dmg`                                    |
+| Windows               | `ShadowBit Setup <version>.exe`                                  |
+| Linux                 | `ShadowBit-<version>.AppImage`, `shadow-bit_<version>_amd64.deb` |
+
+Those names are version literals in `docs/data.js`, tracked by
+`scripts/version-literals.js` — the same module `npm version` writes and the
+CLI E2E suite checks. Run `npm run check-version` after a bump.
+
+---
+
+## Website (`docs/`)
+
+The public site is a static, self-contained single page. It opens by
+double-clicking `docs/index.html` — no server, no build step, and **zero
+network requests at page load**, which is asserted by the site test suite.
+
+```bash
+npx --yes serve -l 9090 docs/   # optional local server
+```
+
+| Page              | Audience     | Contents                                                                                                      |
+| ----------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
+| `docs/index.html` | End users    | Features, how it works, **downloads**, recipes, Q&A, CLI reference, desktop app, security model, vault format |
+| `docs/dev.html`   | Contributors | Build from source, test suites, packaging, source-tree map                                                    |
+
+### Two audiences, two pages
+
+`docs/index.html` deliberately contains **no technology stack**: no Electron,
+no Node.js, no npm, no source tree, no build instructions. Someone who came to
+encrypt a folder should not have to scroll past a package.json to find the
+download button. All contributor content lives on `docs/dev.html`, which is
+linked from the site footer only.
+
+This split is enforced by hand, not by tooling: keep it that way when adding a
+section. The one exception is the CLI, which is a user-facing interface and is
+documented on the main page.
+
+### The download section
+
+`docs/data.js` declares `releases` (the published version list, newest first)
+and `platforms` (per-OS artifacts and install steps). Download URLs are
+**assembled at render time** in `docs/index.js`:
+
+```
+https://github.com/<repo>/releases/download/v<version>/<artifact>
+```
+
+so a version bump cannot leave a hand-written link pointing at a build that was
+never uploaded. The section also:
+
+- **Detects the visitor's platform** from the user agent and opens that tab,
+  badged "your platform". It is a hint, never a filter — every tab stays
+  visible and one click away.
+- **Offers every published version.** Selecting an older one re-points every
+  button, re-stamps the artifact file names, and rewrites the `{file}`
+  placeholder in the step copy, so the Linux instructions never tell someone to
+  `chmod +x` a file they did not download.
+
+`releases.versions` is a hand-maintained list. Adding a release means adding an
+entry — the site deliberately makes no GitHub API call, because it must keep
+working offline over `file://`.
 
 ---
 

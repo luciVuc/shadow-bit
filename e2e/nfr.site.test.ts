@@ -24,6 +24,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as vm from "node:vm";
 import { chromium, type Browser, type Page } from "playwright";
+import { LITERAL_SITES } from "../scripts/version-literals";
 
 // data.js assigns window.APP_DATA; the page has no build step or type
 // checking, so declare just the shape these assertions read.
@@ -56,6 +57,29 @@ const MIME: Record<string, string> = {
   ".json": "application/json",
   ".woff2": "font/woff2",
 };
+
+/**
+ * Evaluate docs/data.js and return the content object.
+ *
+ * data.js is a script that assigns a global, so it is evaluated in a sandbox
+ * rather than JSON.parse'd: a regex that strips comments to make it parseable
+ * breaks the moment a string value contains "//" (a URL, say). The sandbox's
+ * arrays have a different Array.prototype, so compare them through Array.from
+ * or JSON.stringify — assert.deepEqual fails on prototype identity alone.
+ */
+function readAppData() {
+  const sandbox: { window: Record<string, unknown> } = { window: {} };
+  vm.runInNewContext(
+    fs.readFileSync(path.join(DOCS_DIR, "data.js"), "utf8"),
+    sandbox,
+  );
+  return sandbox.window.APP_DATA as {
+    meta: { version: string };
+    releases: { repo: string; versions: { release: string }[] };
+    platforms: { id: string; builds: { file: string }[] }[];
+    cliInstall?: { code: string };
+  };
+}
 
 let browser: Browser;
 let page: Page;
@@ -350,15 +374,12 @@ describe("Q&A renders and stays honest", () => {
     // `commands[].cmd` looks like "create <name>", so the subcommand is the
     // first word of each entry.
     //
-    // data.js is evaluated rather than JSON.parse'd: it is a script that assigns
-    // a global, and a regex that strips comments to make it parseable breaks the
-    // moment a string value contains "//" (a URL, say).
     const sandbox: { window: Record<string, unknown> } = { window: {} };
     vm.runInNewContext(
       fs.readFileSync(path.join(DOCS_DIR, "data.js"), "utf8"),
       sandbox,
     );
-    const data = sandbox.window.APP_DATA as {
+    const data = readAppData() as unknown as {
       commands: { cmd: string }[];
       qa?: { items: { q?: string; code?: string }[] }[];
     };
@@ -462,5 +483,264 @@ describe("vendored utilities behave like the Tailwind build", () => {
       [],
       `classes in index.html with no rule in index.css or utilities.css: ${undefinedClasses.join(", ")}`,
     );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// End-user page carries no technology stack
+//
+// docs/index.html is the page someone lands on from a search engine with the
+// intent to encrypt a folder. It once told them to `git clone` a repository,
+// install Node.js 20+, and run npm scripts, because the install section was
+// written for contributors. That is the wrong page for that content, and the
+// split is enforced by hand — so it needs a tripwire.
+//
+// The contributor material lives on docs/dev.html, which is deliberately NOT
+// exempt: this asserts the main page is clean, not that the dev page is
+// thorough. `npm install -g shadow-bit` IS allowed, because the CLI is a
+// user-facing interface, not a development detail.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("index.html is written for end users, not contributors", () => {
+  // Matched against the rendered source of the main page only. data.js is
+  // shared with dev.html and legitimately still holds devSetup/architecture.
+  const BANNED: [RegExp, string][] = [
+    [/\belectron\b/i, "Electron"],
+    [/\bnode\.?js\b/i, "Node.js"],
+    [/\btypescript\b/i, "TypeScript"],
+    // `npm install -g shadow-bit` is deliberately NOT matched: installing the
+    // CLI is how a terminal user gets the app, not a development detail.
+    [/\bnpm\s+(run|ci|install(?!\s+-g)\b)/, "an npm script/dependency install"],
+    [/\bgit clone\b/i, "git clone"],
+    [/\btailwind\b/i, "Tailwind"],
+  ];
+
+  test("no tech-stack vocabulary appears on the page", async () => {
+    await page.reload({ waitUntil: "load" });
+    const text = await page.evaluate(() => document.body.innerText);
+    const hits = BANNED.filter(([re]) => re.test(text)).map(
+      ([, label]) => label,
+    );
+    assert.deepEqual(
+      hits,
+      [],
+      `index.html shows developer content to end users: ${hits.join(", ")}`,
+    );
+  });
+
+  test("the CLI install line is the one npm command allowed", async () => {
+    // Guarding the exception so the rule above does not quietly become "no npm
+    // at all": installing the CLI is how a terminal user gets the app.
+    await page.reload({ waitUntil: "load" });
+    const cliInstall = await page.evaluate(
+      () => document.querySelector("#cli-install")?.textContent ?? "",
+    );
+    assert.match(cliInstall, /npm install -g shadow-bit/);
+  });
+
+  test("the contributor page exists and is linked from the footer", () => {
+    const devHtml = path.join(DOCS_DIR, "dev.html");
+    assert.ok(fs.existsSync(devHtml), "docs/dev.html is missing");
+    const index = fs.readFileSync(INDEX_HTML, "utf8");
+    assert.ok(
+      index.includes('href="dev.html"'),
+      "index.html must offer a route to the contributor docs",
+    );
+    // …but not from the main navigation: a visitor who clicked Features should
+    // never be offered a build tutorial.
+    const nav = index.slice(index.indexOf("<nav"), index.indexOf("</nav>"));
+    assert.ok(
+      !nav.includes("dev.html"),
+      "dev.html must stay out of the main navigation",
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Downloads
+//
+// A download link that 404s is worse than no download section: it is the
+// primary call to action and it looks fine until it is clicked. Three separate
+// ways to get that wrong, one test each.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("download links are built to survive a version bump", () => {
+  test("every artifact link carries the selected version in tag and name", async () => {
+    await page.reload({ waitUntil: "load" });
+    // "attached", not "visible": links for the two platforms that are not the
+    // open tab are inside a display:none panel, and this test reads all of them.
+    await page.waitForSelector(".download-build", {
+      state: "attached",
+      timeout: 5000,
+    });
+
+    const check = async (version: string) => {
+      await page.click(`.version-chip[data-version="${version}"]`);
+      await page.waitForTimeout(150);
+      return page.evaluate(() =>
+        Array.from(
+          document.querySelectorAll<HTMLAnchorElement>(".download-build"),
+        ).map((a) => ({
+          href: a.getAttribute("href") ?? "",
+          label: a.getAttribute("aria-label") ?? "",
+        })),
+      );
+    };
+
+    for (const version of ["1.0.0", "1.1.3"]) {
+      const links = await check(version);
+      assert.ok(links.length >= 4, "expected links for every platform");
+      for (const { href, label } of links) {
+        // Both halves matter. A tag for 1.0.0 with a 1.1.3 file name in it
+        // 404s, and that is exactly the drift this catches.
+        assert.ok(
+          href.includes(`/releases/download/v${version}/`),
+          `link does not point at tag v${version}: ${href}`,
+        );
+        assert.ok(
+          href.includes(encodeURIComponent(version).replace(/%20/g, " ")) ||
+            href.includes(version),
+          `link does not name version ${version} in the artifact: ${href}`,
+        );
+        // The accessible name has to name the version too, or a screen reader
+        // announces a link that gives no version away.
+        assert.ok(
+          label.includes(version),
+          `link aria-label omits the version: ${label}`,
+        );
+      }
+    }
+  });
+
+  test("artifact file names are never hand-written URLs", () => {
+    // data.js stores bare file names; index.js composes the URL. A full URL
+    // pasted into data.js is the drift this rule exists to prevent, because
+    // nothing rewrites a URL on `npm version` but everything rewrites a name.
+    const data = fs.readFileSync(path.join(DOCS_DIR, "data.js"), "utf8");
+    const inBuilds = data.slice(
+      data.indexOf("platforms: ["),
+      data.indexOf("cliInstall:"),
+    );
+    assert.ok(
+      !/https?:\/\//.test(inBuilds),
+      "data.js platforms[] contains a literal URL; store the file name only",
+    );
+  });
+
+  test("every platform tab stays reachable — detection is a hint", async () => {
+    // The page detects the OS and opens that tab. If detection ever became a
+    // filter, a Linux visitor on a Mac (or a bot, whose UA says nothing) would
+    // be shown a download they cannot use and no way to switch.
+    await page.reload({ waitUntil: "load" });
+    await page.waitForSelector(".install-tab-btn", { timeout: 5000 });
+    const platforms = await page.evaluate(() =>
+      Array.from(document.querySelectorAll(".install-tab-btn")).map(
+        (b) => (b as HTMLElement).dataset.tab,
+      ),
+    );
+    assert.equal(platforms.length, 3, "expected macOS / Windows / Linux tabs");
+    for (const id of platforms) {
+      const panelVisible = await page.evaluate((pid) => {
+        const btn = document.querySelector(
+          `.install-tab-btn[data-tab="${pid}"]`,
+        ) as HTMLElement;
+        btn.click();
+        return (
+          document
+            .querySelector(`.install-panel[data-panel="${pid}"]`)
+            ?.classList.contains("active") ?? false
+        );
+      }, id);
+      assert.ok(panelVisible, `platform tab ${id} did not open its panel`);
+    }
+  });
+
+  test("the version list leads with the current app version", () => {
+    const data = readAppData();
+    const versions = data.releases.versions;
+    assert.ok(
+      versions.length > 0,
+      "expected at least one previous release listed",
+    );
+    // The current version must NOT be in the history array, and the history
+    // must be keyed `release` rather than `version`. `npm version` anchors the
+    // current version on the text `version: "`, so a history entry spelled that
+    // way would be rewritten too: a bump would turn 1.0.0 into the new version
+    // and the site would advertise a build that does not exist. index.js
+    // prepends meta.version instead (see allVersions()).
+    assert.ok(
+      !versions.some((v) => v.release === data.meta.version),
+      "the current version must not be duplicated in releases.versions",
+    );
+    for (const v of versions) {
+      assert.equal(
+        (v as unknown as { version?: string }).version,
+        undefined,
+        `history entry ${v.release} is keyed "version"; it must be "release" ` +
+          "or `npm version` will rewrite it",
+      );
+    }
+    // Sanity-check the version bump reaches the download names.
+    for (const p of data.platforms) {
+      for (const b of p.builds) {
+        assert.ok(
+          b.file.includes(data.meta.version),
+          `artifact ${b.file} does not embed the current version`,
+        );
+      }
+    }
+  });
+
+  test("npm version leaves the release history alone", () => {
+    // The failure this guards is destructive and quiet. `npm version` rewrites
+    // every anchored version literal in docs/data.js. If the release history
+    // were listed in the same shape as the current version, the next bump would
+    // rewrite 1.0.0 -> 1.1.4 as well: the site would offer a download for a
+    // build that never existed, and lose the real 1.0.0 from the list.
+    //
+    // This replays the rewrite the real module performs, using its own site
+    // definitions rather than a hand-written string replace -- a naive replace
+    // is the thing that "proved" either answer depending on how it was written,
+    // and would not have caught this bug.
+    const escapeRe = (s: string) => s.replace(/[.*+?^${}()[\]|\\]/g, "\\$&");
+    const current = readAppData().meta.version;
+    const next = "9.9.9";
+
+    let bumped = fs.readFileSync(path.join(DOCS_DIR, "data.js"), "utf8");
+    for (const site of LITERAL_SITES) {
+      if (!site.file.endsWith("docs/data.js")) continue;
+      const re = new RegExp(
+        `${escapeRe(site.before)}(.+?)${escapeRe(site.after)}`,
+        "g",
+      );
+      bumped = bumped.replace(
+        re,
+        // Re-emit the whole match, anchors included. Replacing with the bare
+        // version drops `site.before`/`site.after` -- the surrounding quotes --
+        // and produces a syntax error, which is exactly what happened the first
+        // time this test was written.
+        (_match, cur: string) => {
+          const want = site.transform ? site.transform(next) : next;
+          return `${site.before}${want}${site.after}`;
+        },
+      );
+    }
+
+    const after: { window: Record<string, unknown> } = { window: {} };
+    vm.runInNewContext(bumped, after);
+    const data = after.window.APP_DATA as ReturnType<typeof readAppData>;
+
+    assert.equal(data.meta.version, next, "meta.version must follow the bump");
+    assert.deepEqual(
+      Array.from(data.releases.versions, (v) => v.release),
+      Array.from(readAppData().releases.versions, (v) => v.release),
+      "a version bump rewrote the release history",
+    );
+    for (const p of data.platforms) {
+      for (const b of p.builds) {
+        assert.ok(
+          b.file.includes(next),
+          `artifact ${b.file} did not follow the version bump`,
+        );
+      }
+    }
   });
 });

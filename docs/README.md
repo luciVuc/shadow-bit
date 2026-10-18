@@ -24,20 +24,23 @@ npx --yes serve -l 9090 docs/
 
 ## What's on the page
 
-| Section           | What it covers                                                                                                                         |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Hero**          | Animated lock icon, tagline, stat pills (cipher, KDF, format, platforms)                                                               |
-| **Vault Format**  | Visual diagram of the `.svlt` binary format + legend explaining envelope encryption, GCM auth, and the recovery key                    |
-| **Features**      | 10 feature cards covering encryption, portability, password changes, recovery key, CLI+GUI, scrypt, drag-and-drop                      |
-| **How It Works**  | 4-step workflow cards (Create → Open → Edit → Close) with inline CLI examples                                                          |
-| **Installation**  | Platform tabs (macOS / Windows / Linux / From Source) with code blocks and copy buttons                                                |
-| **Recipes**       | 4 copy-ready shell recipes (share, recover, automate, migrate)                                                                         |
-| **Q&A**           | 30 questions in 4 categories (Getting started, How-to recipes, Privacy & limits, Troubleshooting) with live search and category filter |
-| **CLI Reference** | All 14 commands with flags, descriptions, and example snippets; live search filter                                                     |
-| **Desktop GUI**   | 4-tab GUI mock (Open / Create / Manage / Open Vaults) with decorative form previews                                                    |
-| **Security**      | 13 security property cards + audit-status callout + best-effort erase notice                                                           |
-| **Architecture**  | Source tree for `src/core/`, `src/cli/`, `src/gui/` with per-file descriptions                                                         |
-| **Footer**        | Navigation links, help links, license, version                                                                                         |
+| Section           | What it covers                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hero**          | Animated lock icon, tagline, stat pills (cipher, KDF, format, platforms)                                                                             |
+| **Vault Format**  | Visual diagram of the `.svlt` binary format + legend explaining envelope encryption, GCM auth, and the recovery key                                  |
+| **Features**      | 10 feature cards covering encryption, portability, password changes, recovery key, CLI+GUI, scrypt, drag-and-drop                                    |
+| **How It Works**  | 4-step workflow cards (Create → Open → Edit → Close) with inline CLI examples                                                                        |
+| **Download**      | Version chips (every published release), platform tabs (macOS / Windows / Linux) with real download buttons, numbered install steps, release history |
+| **Recipes**       | 4 copy-ready shell recipes (share, recover, automate, migrate)                                                                                       |
+| **Q&A**           | 30 questions in 4 categories (Getting started, How-to recipes, Privacy & limits, Troubleshooting) with live search and category filter               |
+| **CLI Reference** | All 14 commands with flags, descriptions, and example snippets; live search filter                                                                   |
+| **Desktop GUI**   | 4-tab GUI mock (Open / Create / Manage / Open Vaults) with decorative form previews                                                                  |
+| **Security**      | 13 security property cards + audit-status callout + best-effort erase notice                                                                         |
+| **Footer**        | Navigation links, help links, a link to `dev.html`, license, version                                                                                 |
+
+`dev.html` is a **separate contributor page**: build-from-source, the test
+suites, packaging, and the `src/core` / `src/cli` / `src/gui` source tree. It is
+linked from the footer only, never from the main navigation.
 
 ---
 
@@ -52,8 +55,10 @@ npx --yes serve -l 9090 docs/
 - **Q&A accordion** — `<details>`/`<summary>` questions (keyboard-operable and
   announced correctly with no JS), filtered live by a search box and by
   category chips. Filtering hides whole groups that end up empty.
-- **Install tabs** — switch between macOS / Windows / Linux / From Source.
-- **GUI tabs** — switch between the four Electron app tabs.
+- **Download section** — version chips re-point every button at a chosen release;
+  platform tabs switch between macOS / Windows / Linux, opened on the platform
+  detected from the user agent.
+- **GUI tabs** — switch between the four desktop-app tabs.
 - **Mobile menu** — hamburger nav for ≤768px viewports.
 - **Responsive** — tested at 375px (phone), 768px (tablet), 1280px (desktop).
 - **Dark theme** — deep navy + electric cyan + indigo accent palette.
@@ -64,10 +69,13 @@ npx --yes serve -l 9090 docs/
 
 ```
 docs/
-├── index.html    # semantic structure, templates, script/link refs
-├── index.css     # design tokens, animations, component styles
-├── data.js       # window.APP_DATA — all content (features, commands, etc.)
-├── index.js      # class App — rendering, event wiring, interactions
+├── index.html    # the end-user page: structure, templates, script/link refs
+├── dev.html      # the contributor page: build, test, packaging, source tree
+├── index.css     # design tokens, animations, component styles (both pages)
+├── utilities.css # vendored Tailwind-style utilities (both pages)
+├── data.js       # window.APP_DATA — all content, both pages
+├── index.js      # class App     — renders index.html
+├── dev.js        # class DevApp  — renders dev.html
 ├── README.md     # this file
 └── AGENTS.md     # orientation for the next coding agent
 ```
@@ -86,7 +94,8 @@ Rules that exist because a claim here was wrong:
   `src/core/hidden.ts` (hidden volumes, plausible deniability) and
   `src/core/stego.ts` (carrier-file steganography) are implemented and
   unit-tested, but nothing in `src/cli/` or `src/gui/` imports them. They are
-  listed under Architecture as library-only and appear nowhere else. Do not add
+  listed under Architecture on `dev.html` as library-only and appear nowhere
+  else. Do not add
   them to features, use cases, or security properties — and do not describe them
   as anything a user can operate.
 - **The Q&A is where this is easiest to get wrong.** Someone searching "duress"
@@ -117,9 +126,10 @@ All text content lives in **`data.js`** as `window.APP_DATA`. To change:
 - **Features** → edit `APP_DATA.features[]`
 - **Q&A questions** → edit `APP_DATA.qa[]` (grouped by category; see below)
 - **CLI commands** → edit `APP_DATA.commands[]`
-- **Installation steps** → edit `APP_DATA.installTabs[]`
+- **CLI install command** → edit `APP_DATA.cliInstall`
 - **Security properties** → edit `APP_DATA.security[]`
-- **Architecture files** → edit `APP_DATA.architecture[]`
+- **Downloads, versions, platforms** → edit `APP_DATA.releases` / `APP_DATA.platforms`
+- **Developer page content** → edit `APP_DATA.devSetup` / `APP_DATA.architecture` (rendered by `dev.js`, used only by `dev.html`)
 - **Hero text / version** → edit `APP_DATA.meta`
 
 ### The Q&A data shape

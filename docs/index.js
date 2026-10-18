@@ -27,8 +27,16 @@ function copyCode(btn, text) {
 class App {
   constructor(data) {
     this.data = data;
-    /** @type {string} active install tab id */
-    this.activeInstall = data.installTabs[0].id;
+    /** @type {string} active platform tab id */
+    this.activePlatform = data.platforms[0].id;
+    /** @type {boolean} whether the download section has been rendered once */
+    this.openedPlatform = false;
+    /** @type {string} the platform the user agent suggests, kept separately
+     *  from the active tab so the "your platform" badge stays put when the
+     *  visitor switches tabs — it describes their machine, not what is open. */
+    this.detectedPlatform = data.platforms[0].id;
+    /** @type {string} the version the download buttons currently point at */
+    this.selectedVersion = data.meta.version;
     /** @type {string} active GUI tab id */
     this.activeGui = data.guiTabs[0].id;
     /** @type {string} CLI search query */
@@ -52,7 +60,6 @@ class App {
     this.renderCli();
     this.renderGui();
     this.renderSecurity();
-    this.renderArchitecture();
     this.renderFooter();
     this.bindEvents();
     this.initScrollSpy();
@@ -68,8 +75,11 @@ class App {
     this.el.featuresGrid = document.getElementById("features-grid");
     this.el.useCasesGrid = document.getElementById("use-cases-grid");
     this.el.workflowSteps = document.getElementById("workflow-steps");
+    this.el.versionPicker = document.getElementById("version-picker");
     this.el.installTabs = document.getElementById("install-tabs");
     this.el.installPanels = document.getElementById("install-panels");
+    this.el.allReleases = document.getElementById("all-releases");
+    this.el.cliInstall = document.getElementById("cli-install");
     this.el.faqSearch = document.getElementById("faq-search");
     this.el.faqFilters = document.getElementById("faq-filters");
     this.el.faqGroups = document.getElementById("faq-groups");
@@ -79,7 +89,6 @@ class App {
     this.el.guiTabBar = document.getElementById("gui-tab-bar");
     this.el.guiContent = document.getElementById("gui-content");
     this.el.securityGrid = document.getElementById("security-grid");
-    this.el.archTree = document.getElementById("arch-tree");
     this.el.footerMeta = document.getElementById("footer-meta");
   }
 
@@ -138,68 +147,391 @@ class App {
     this.el.workflowSteps.replaceChildren(frag);
   }
 
-  // ─── Installation ────────────────────────────────────────────────────
+  // ─── Download ────────────────────────────────────────────────────────
+  /**
+   * Every selectable version, newest first: the current app version, then the
+   * releases listed in data.js.
+   *
+   * The current version is derived from `meta.version` rather than listed
+   * alongside the history. `npm version` rewrites every version-shaped literal
+   * in data.js, so keeping the current one in that array would mean a bump
+   * also rewrote 1.0.0 → the new version — the site would advertise a download
+   * for a build that does not exist and lose the real one.
+   *
+   * The history entries are keyed `release`, not `version`: see the comment in
+   * data.js. Renaming the key back would put them in range of `npm version`.
+   *
+   * @returns {{version: string, released?: string, notes?: string, current?: boolean}[]}
+   */
+  allVersions() {
+    const current = { version: this.data.meta.version, current: true };
+    const history = (this.data.releases.versions || []).map((entry) => ({
+      version: entry.release,
+      released: entry.released,
+      notes: entry.notes,
+    }));
+    return [current].concat(history);
+  }
+
+  /**
+   * Guess the visitor's platform from the user agent so the matching tab is
+   * open on arrival. This is a convenience, never a gate: every platform stays
+   * one click away, and the guess is a hint the visitor can ignore.
+   *
+   * @returns {string} a platform id, defaulting to the first one.
+   */
+  detectPlatform() {
+    const ua = (
+      (window.navigator && window.navigator.userAgent) ||
+      ""
+    ).toLowerCase();
+    const platform = String(
+      (window.navigator && window.navigator.platform) || "",
+    ).toLowerCase();
+    const haystack = `${ua} ${platform}`;
+    const match = this.data.platforms.find((p) =>
+      (p.detect || []).some((token) => haystack.includes(token)),
+    );
+    return match ? match.id : this.data.platforms[0].id;
+  }
+
+  /**
+   * The download URL for one artifact.
+   *
+   * Assembled from the repository URL + tag rather than written out by hand:
+   * a hand-written link is exactly the thing that survives a version bump and
+   * then 404s, and nothing in the site would notice.
+   *
+   * Artifact names embed their version (ShadowBit-1.1.3.AppImage), so the
+   * names are written against the current version and re-stamped here when the
+   * visitor picks an older one. Substituting on the version *string* is why
+   * this works: the names live in data.js as literals that `npm version`
+   * rewrites in place, rather than as templates the bump script cannot see.
+   *
+   * @param {string} file artifact file name, e.g. "ShadowBit-1.1.3.AppImage".
+   * @param {string} version the tag version to fetch it from.
+   * @returns {string} an absolute URL.
+   */
+  downloadUrl(file, version) {
+    const name = this.stampVersion(file, version);
+    return `${this.data.releases.repo}/releases/download/v${version}/${encodeURIComponent(name)}`;
+  }
+
+  /** Re-stamp an artifact name written against the current version. */
+  stampVersion(file, version) {
+    const current = this.data.meta.version;
+    return version === current ? file : file.split(current).join(version);
+  }
+
+  /** The artifact name for the version currently selected. */
+  downloadFileName(file) {
+    return this.stampVersion(file, this.selectedVersion);
+  }
+
+  /** Release page for one version — where the checksums and every artifact live. */
+  releasePageUrl(version) {
+    return `${this.data.releases.repo}/releases/tag/v${version}`;
+  }
+
+  /**
+   * Render the version selector, the platform tabs, one panel per platform,
+   * and the "all releases" footer. Called again whenever the selected version
+   * changes, which is why it rebuilds rather than mutates.
+   */
   renderInstall() {
+    this.detectedPlatform = this.detectPlatform();
+    // Open on the detected platform the first time. On a version change the
+    // whole section is re-rendered, so the visitor's open tab is preserved —
+    // losing their place because they picked an older build would be a small,
+    // very avoidable annoyance.
+    if (!this.openedPlatform) {
+      this.activePlatform = this.detectedPlatform;
+      this.openedPlatform = true;
+    }
+    this.renderVersionPicker();
+
     // Tab buttons
     const tabFrag = document.createDocumentFragment();
-    this.data.installTabs.forEach((tab) => {
+    this.data.platforms.forEach((platform) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "install-tab-btn";
-      btn.dataset.tab = tab.id;
-      btn.id = `install-tab-${tab.id}`;
+      btn.dataset.tab = platform.id;
+      btn.id = `install-tab-${platform.id}`;
       btn.setAttribute("role", "tab");
-      btn.setAttribute("aria-selected", String(tab.id === this.activeInstall));
-      btn.setAttribute("aria-controls", `install-panel-${tab.id}`);
+      btn.setAttribute(
+        "aria-selected",
+        String(platform.id === this.activePlatform),
+      );
+      btn.setAttribute("aria-controls", `install-panel-${platform.id}`);
       // Roving tabindex: only the active tab is in the tab order, so Tab
       // moves past the widget and arrow keys move between tabs.
-      btn.tabIndex = tab.id === this.activeInstall ? 0 : -1;
-      btn.textContent = `${tab.icon} ${tab.label}`;
-      if (tab.id === this.activeInstall) btn.classList.add("active");
+      btn.tabIndex = platform.id === this.activePlatform ? 0 : -1;
+      btn.textContent = `${platform.icon} ${platform.label}`;
+      if (platform.id === this.activePlatform) btn.classList.add("active");
+      // The badge marks the *detected* platform, not the open tab: it tells
+      // the visitor which tab is theirs, and stays put when they browse the
+      // others. A hint, never a filter — every tab remains visible.
+      if (platform.id === this.detectedPlatform) {
+        const tag = document.createElement("span");
+        tag.className = "install-tab-badge";
+        tag.textContent = "your platform";
+        btn.append(tag);
+      }
       tabFrag.append(btn);
     });
     this.el.installTabs.replaceChildren(tabFrag);
 
     // Panels
     const panelFrag = document.createDocumentFragment();
-    this.data.installTabs.forEach((tab) => {
+    this.data.platforms.forEach((platform) => {
       const panel = document.createElement("div");
       panel.className = "install-panel";
-      panel.dataset.panel = tab.id;
-      panel.id = `install-panel-${tab.id}`;
+      panel.dataset.panel = platform.id;
+      panel.id = `install-panel-${platform.id}`;
       panel.setAttribute("role", "tabpanel");
-      panel.setAttribute("aria-labelledby", `install-tab-${tab.id}`);
+      panel.setAttribute("aria-labelledby", `install-tab-${platform.id}`);
       panel.tabIndex = 0;
-      if (tab.id === this.activeInstall) panel.classList.add("active");
+      if (platform.id === this.activePlatform) panel.classList.add("active");
 
-      // Steps
-      tab.steps.forEach((step) => {
-        const stepEl = cloneTemplate("install-step-tpl");
-        stepEl.querySelector('[data-field="title"]').textContent = step.title;
-        const codeEl = stepEl.querySelector('[data-field="code"]');
-        codeEl.textContent = step.code;
-        // Wire copy button
-        const copyBtn = stepEl.querySelector(".copy-btn");
-        copyBtn.addEventListener("click", () => copyCode(copyBtn, step.code));
-        panel.append(stepEl);
+      const heading = document.createElement("div");
+      heading.className = "install-panel-heading";
+      heading.textContent = `Download for ${platform.label}`;
+      panel.append(heading);
+
+      // Download buttons
+      const buildsWrap = document.createElement("div");
+      buildsWrap.className = "download-builds";
+      platform.builds.forEach((build) => {
+        const a = cloneTemplate("download-build-tpl");
+        a.querySelector('[data-field="label"]').textContent = build.label;
+        a.querySelector('[data-field="format"]').textContent = build.format;
+        a.querySelector('[data-field="arch"]').textContent = build.arch || "";
+        a.querySelector('[data-field="size"]').textContent = build.size || "";
+        const action = a.querySelector('[data-field="action"]');
+        action.textContent = `Download ${this.selectedVersion}`;
+        a.href = this.downloadUrl(build.file, this.selectedVersion);
+        // The visible label names the version; the accessible name must too,
+        // or a screen reader announces a link that gives no version away.
+        a.setAttribute(
+          "aria-label",
+          `${build.label}, ${build.format}, version ${this.selectedVersion}`,
+        );
+        a.setAttribute("download", "");
+        if (build.primary) a.classList.add("primary");
+        buildsWrap.append(a);
       });
+      panel.append(buildsWrap);
+
+      // Steps — what to do with the file that was just downloaded.
+      //
+      // `{file}` in a step's title/desc/code is replaced with the file the
+      // visitor is actually about to have: for Linux that is the AppImage, and
+      // its name embeds the version, so `chmod +x "ShadowBit-1.1.3.AppImage"`
+      // must not keep naming a build they did not download when they pick
+      // 1.1.0 from the version chips.
+      const primaryFile = platform.builds.find((b) => b.primary);
+      const steps = document.createElement("ol");
+      steps.className = "install-steps";
+      platform.steps.forEach((step, i) => {
+        const stepEl = cloneTemplate("install-step-tpl");
+        const stamp = (text) =>
+          primaryFile
+            ? text.split("{file}").join(this.downloadFileName(primaryFile.file))
+            : text;
+        stepEl.querySelector('[data-field="num"]').textContent = String(i + 1);
+        stepEl.querySelector('[data-field="title"]').textContent = stamp(
+          step.title,
+        );
+        stepEl.querySelector('[data-field="desc"]').textContent = stamp(
+          step.desc,
+        );
+        // The Linux AppImage steps carry a command; the rest do not, so the
+        // code wrapper is hidden rather than cloning a template variant.
+        const codeWrapper = stepEl.querySelector('[data-field="code-wrapper"]');
+        if (step.code) {
+          const code = stamp(step.code);
+          stepEl.querySelector('[data-field="code"]').textContent = code;
+          const copyBtn = stepEl.querySelector(".copy-btn");
+          copyBtn.addEventListener("click", () => copyCode(copyBtn, code));
+        } else {
+          codeWrapper.hidden = true;
+        }
+        steps.append(stepEl);
+      });
+      panel.append(steps);
 
       // Note
-      if (tab.note) {
+      if (platform.note) {
         const note = document.createElement("div");
         note.className = "install-note";
-        note.textContent = tab.note;
+        note.textContent = platform.note;
         panel.append(note);
       }
+
+      // Release page link — where checksums and every other artifact for this
+      // version live, and the fallback if a direct link 404s.
+      const relLink = document.createElement("a");
+      relLink.className = "install-release-link";
+      relLink.href = this.releasePageUrl(this.selectedVersion);
+      relLink.textContent = `All downloads and checksums for v${this.selectedVersion}`;
+      panel.append(relLink);
 
       panelFrag.append(panel);
     });
     this.el.installPanels.replaceChildren(panelFrag);
+    this.renderAllReleases();
+    this.renderCliInstall();
   }
 
-  /** Switch the active install tab. */
+  /**
+   * The command-line install, rendered as its own block beneath the desktop
+   * downloads. The desktop app is the primary path; this exists because a
+   * meaningful share of visitors arrive from a terminal and should not have to
+   * scroll past three tabs to find the one line they need.
+   */
+  renderCliInstall() {
+    const { cliInstall } = this.data;
+    if (!cliInstall || !this.el.cliInstall) return;
+
+    const box = document.createElement("div");
+    box.className = "cli-install-inner";
+
+    const title = document.createElement("div");
+    title.className = "install-panel-heading";
+    title.textContent = cliInstall.title;
+    box.append(title);
+
+    const desc = document.createElement("p");
+    desc.className = "cli-install-desc";
+    desc.textContent = cliInstall.desc;
+    box.append(desc);
+
+    const codeWrap = document.createElement("div");
+    codeWrap.className = "install-step-code-wrapper";
+    // Cloned from a template rather than assembled element-by-element: the
+    // inline SVG is markup, and the only reason to build it in JS is to avoid
+    // a template — so use the template.
+    const copyBtn = cloneTemplate("copy-btn-tpl");
+    copyBtn.setAttribute("aria-label", "Copy install command");
+    copyBtn.addEventListener("click", () => copyCode(copyBtn, cliInstall.code));
+
+    const pre = document.createElement("pre");
+    pre.className = "install-code";
+    const code = document.createElement("code");
+    code.textContent = cliInstall.code;
+    pre.append(code);
+
+    codeWrap.append(copyBtn, pre);
+    box.append(codeWrap);
+
+    if (cliInstall.note) {
+      const note = document.createElement("div");
+      note.className = "install-note";
+      note.textContent = cliInstall.note;
+      box.append(note);
+    }
+
+    const relLink = document.createElement("a");
+    relLink.className = "install-release-link";
+    relLink.href = `${this.data.releases.repo}/releases`;
+    relLink.textContent = "Or download a CLI release archive";
+    box.append(relLink);
+
+    this.el.cliInstall.replaceChildren(box);
+  }
+
+  /** Render the "which version do you want" chips. */
+  renderVersionPicker() {
+    const wrap = document.createElement("div");
+    wrap.className = "version-picker-inner";
+
+    const label = document.createElement("span");
+    label.className = "version-picker-label";
+    label.id = "version-picker-label";
+    label.textContent = "Version";
+    wrap.append(label);
+
+    const group = document.createElement("div");
+    group.className = "version-picker-options";
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-labelledby", "version-picker-label");
+
+    this.allVersions().forEach((entry) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "version-chip";
+      btn.dataset.version = entry.version;
+      btn.setAttribute(
+        "aria-pressed",
+        String(entry.version === this.selectedVersion),
+      );
+      btn.textContent = entry.current
+        ? `${entry.version} (latest)`
+        : entry.version;
+      if (entry.version === this.selectedVersion) btn.classList.add("active");
+      group.append(btn);
+    });
+    wrap.append(group);
+
+    const hint = document.createElement("p");
+    hint.className = "version-picker-hint";
+    hint.textContent =
+      "Older releases stay downloadable — useful if a newer build breaks something on your machine.";
+    wrap.append(hint);
+
+    this.el.versionPicker.replaceChildren(wrap);
+  }
+
+  /** Render the release history list under the panels. */
+  renderAllReleases() {
+    const wrap = document.createElement("div");
+    wrap.className = "all-releases-inner";
+
+    const heading = document.createElement("div");
+    heading.className = "install-panel-heading";
+    heading.textContent = "Every past release";
+    wrap.append(heading);
+
+    const list = document.createElement("ul");
+    list.className = "release-list";
+    this.allVersions().forEach((entry) => {
+      const item = document.createElement("li");
+      item.className = "release-item";
+
+      const link = document.createElement("a");
+      link.className = "release-link";
+      link.href = this.releasePageUrl(entry.version);
+      link.textContent = `v${entry.version}`;
+      item.append(link);
+
+      const meta = document.createElement("span");
+      meta.className = "release-meta";
+      meta.textContent = entry.released ? entry.released : entry.notes || "";
+      item.append(meta);
+
+      if (entry.version === this.selectedVersion) {
+        const cur = document.createElement("span");
+        cur.className = "release-current";
+        cur.textContent = "selected";
+        item.append(cur);
+      }
+      list.append(item);
+    });
+    wrap.append(list);
+
+    const link = document.createElement("a");
+    link.className = "install-release-link";
+    link.href = `${this.data.releases.repo}/releases`;
+    link.textContent = "Browse all releases on GitHub";
+    wrap.append(link);
+
+    this.el.allReleases.replaceChildren(wrap);
+  }
+
+  /** Switch the active platform tab. */
   switchInstallTab(id) {
-    this.activeInstall = id;
+    this.activePlatform = id;
     this.el.installTabs.querySelectorAll(".install-tab-btn").forEach((btn) => {
       const active = btn.dataset.tab === id;
       btn.classList.toggle("active", active);
@@ -209,6 +541,17 @@ class App {
     this.el.installPanels.querySelectorAll(".install-panel").forEach((p) => {
       p.classList.toggle("active", p.dataset.panel === id);
     });
+  }
+
+  /**
+   * Point every download button at a different version. The whole section is
+   * re-rendered rather than patched: the links, the step copy and the release
+   * list all mention the version, and a partial update is how one of them
+   * silently keeps pointing at the previous build.
+   */
+  selectVersion(version) {
+    this.selectedVersion = version;
+    this.renderInstall();
   }
 
   /**
@@ -546,28 +889,10 @@ class App {
   }
 
   // ─── Architecture ────────────────────────────────────────────────────
-  renderArchitecture() {
-    const frag = document.createDocumentFragment();
-    this.data.architecture.forEach((mod) => {
-      const moduleEl = cloneTemplate("arch-module-tpl");
-      moduleEl.querySelector('[data-field="path"]').textContent = mod.path;
-      moduleEl.querySelector('[data-field="desc"]').textContent = mod.desc;
-
-      const filesContainer = moduleEl.querySelector(
-        '[data-field="files-container"]',
-      );
-      const filesFrag = document.createDocumentFragment();
-      mod.files.forEach((file) => {
-        const fileEl = cloneTemplate("arch-file-tpl");
-        fileEl.querySelector('[data-field="name"]').textContent = file.name;
-        fileEl.querySelector('[data-field="desc"]').textContent = file.desc;
-        filesFrag.append(fileEl);
-      });
-      filesContainer.replaceChildren(filesFrag);
-      frag.append(moduleEl);
-    });
-    this.el.archTree.replaceChildren(frag);
-  }
+  //
+  // The source-tree walk lives on dev.html, not here: it is contributor
+  // documentation, and the marketing page has no business describing a
+  // codebase to someone who came to download a file.
 
   // ─── Footer ──────────────────────────────────────────────────────────
   renderFooter() {
@@ -603,6 +928,14 @@ class App {
     this.el.installTabs.addEventListener("click", (e) => {
       const btn = e.target.closest(".install-tab-btn");
       if (btn) this.switchInstallTab(btn.dataset.tab);
+    });
+
+    // Version chips (delegated). The handler lives on the container, which
+    // renderInstall() replaces on every selection, so it must survive the
+    // re-render — hence delegation rather than a listener per chip.
+    this.el.versionPicker.addEventListener("click", (e) => {
+      const btn = e.target.closest(".version-chip");
+      if (btn) this.selectVersion(btn.dataset.version);
     });
 
     // GUI tab clicks (delegated)

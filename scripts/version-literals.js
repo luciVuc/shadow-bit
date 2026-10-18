@@ -48,17 +48,40 @@ const LITERAL_SITES = [
     after: "<",
     transform: (v) => majorMinor(v),
   },
+  // Artifact names on the site's download buttons. These are the file names
+  // the release actually uploads, so a stale one is a 404 on the primary call
+  // to action. The `after` anchors include the arch suffix on purpose:
+  // "ShadowBit-" … ".dmg" would capture "1.1.3-arm64" and silently rewrite the
+  // download to ShadowBit-<v>.dmg, dropping the architecture the visitor needs.
   {
     file: "docs/data.js",
-    label: "Windows NSIS installer name",
+    label: "download: macOS Apple Silicon DMG name",
+    before: "ShadowBit-",
+    after: "-arm64.dmg",
+  },
+  {
+    file: "docs/data.js",
+    label: "download: macOS Intel DMG name",
+    before: "ShadowBit-",
+    after: "-x64.dmg",
+  },
+  {
+    file: "docs/data.js",
+    label: "download: Windows NSIS installer name",
     before: "ShadowBit Setup ",
     after: ".exe",
   },
   {
     file: "docs/data.js",
-    label: "Linux AppImage name",
+    label: "download: Linux AppImage name",
     before: "ShadowBit-",
     after: ".AppImage",
+  },
+  {
+    file: "docs/data.js",
+    label: "download: Linux deb name",
+    before: "shadow-bit_",
+    after: "_amd64.deb",
   },
   {
     file: "QUICKSTART.md",

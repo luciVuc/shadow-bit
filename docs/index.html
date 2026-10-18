@@ -6,7 +6,7 @@
     <title>ShadowBit — one encrypted file, one password, no accounts</title>
     <meta
       name="description"
-      content="ShadowBit locks a folder into a single encrypted .svlt file you can email or carry on a USB stick. AES-256-GCM, scrypt, a recovery key, and keyfile support. CLI and Electron desktop app."
+      content="ShadowBit locks a folder into a single encrypted .svlt file you can email or carry on a USB stick. AES-256-GCM, scrypt, a recovery key, and keyfile support. Desktop app and command line."
     />
 
     <!-- Local styles. utilities.css must come after index.css: it holds the
@@ -34,7 +34,7 @@
         <ul class="hidden md:flex items-center gap-1 text-sm">
           <li><a href="#features" class="nav-link">Features</a></li>
           <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
-          <li><a href="#install" class="nav-link">Install</a></li>
+          <li><a href="#install" class="nav-link">Download</a></li>
           <li><a href="#workflows" class="nav-link">Recipes</a></li>
           <li><a href="#faq" class="nav-link">Q&amp;A</a></li>
           <li><a href="#cli" class="nav-link">CLI</a></li>
@@ -43,7 +43,7 @@
         </ul>
 
         <div class="flex items-center gap-3">
-          <a href="#install" class="btn-primary text-sm">Get Started</a>
+          <a href="#install" class="btn-primary text-sm">Download</a>
           <button
             id="menu-toggle"
             class="md:hidden text-sb-muted hover:text-white p-1"
@@ -76,7 +76,7 @@
           </li>
           <li><a href="#workflows" class="mobile-nav-link">Recipes</a></li>
           <li><a href="#faq" class="mobile-nav-link">Q&amp;A</a></li>
-          <li><a href="#install" class="mobile-nav-link">Install</a></li>
+          <li><a href="#install" class="mobile-nav-link">Download</a></li>
           <li><a href="#cli" class="mobile-nav-link">CLI Reference</a></li>
           <li><a href="#gui" class="mobile-nav-link">Desktop GUI</a></li>
           <li><a href="#security" class="mobile-nav-link">Security</a></li>
@@ -113,7 +113,7 @@
             <span
               class="w-1.5 h-1.5 rounded-full bg-sb-cyan animate-pulse"
             ></span>
-            AES-256-GCM · scrypt · Electron · CLI
+            AES-256-GCM · scrypt · Desktop · CLI
           </div>
 
           <h1
@@ -134,7 +134,7 @@
 
           <div class="flex flex-wrap items-center justify-center gap-4">
             <a href="#install" class="btn-hero-primary">
-              <span>Get Started</span>
+              <span>Download for free</span>
               <svg
                 class="w-4 h-4"
                 fill="none"
@@ -196,9 +196,8 @@
           <p class="text-sb-muted text-lg mb-16 max-w-2xl">
             AES-256-GCM or ChaCha20-Poly1305. scrypt key derivation. An
             authenticated header that rejects tampering. Keyfile second factors.
-            A one-time recovery key. Paranoid mode. A complete security stack
-            with zero dependencies beyond Node.js built-ins for the
-            cryptographic core.
+            A one-time recovery key. Paranoid mode. Audited cryptography, with
+            no third-party libraries standing between your files and the cipher.
           </p>
           <!-- Feature cards rendered by JS -->
           <div
@@ -254,22 +253,32 @@
       <!-- ─── INSTALLATION ─────────────────────────────────────────────────── -->
       <section id="install" class="py-24 px-6 section-alt">
         <div class="max-w-4xl mx-auto">
-          <div class="section-tag mb-4">Installation</div>
-          <h2 class="section-heading mb-4">Get up and running.</h2>
-          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
-            Choose your platform. Requires Node.js 20+.
+          <div class="section-tag mb-4">Download</div>
+          <h2 class="section-heading mb-4">Download ShadowBit.</h2>
+          <p class="text-sb-muted text-lg mb-10 max-w-2xl">
+            Pick your platform. One download, no account, no installer wizard on
+            macOS or Linux.
           </p>
+
+          <!-- Which version the download buttons point at. Rendered by JS. -->
+          <div id="version-picker" class="version-picker mb-8"></div>
 
           <!-- Platform tabs -->
           <div
             id="install-tabs"
             class="install-tabs flex gap-2 mb-8 flex-wrap"
             role="tablist"
-            aria-label="Install method"
+            aria-label="Choose your platform"
           ></div>
 
           <!-- Tab content panels rendered by JS -->
           <div id="install-panels"></div>
+
+          <!-- Older / other versions -->
+          <div id="all-releases" class="all-releases mt-10"></div>
+
+          <!-- Command-line install -->
+          <div id="cli-install" class="cli-install mt-10"></div>
         </div>
       </section>
 
@@ -394,12 +403,11 @@ ls &lt;working-folder&gt;
           <div class="section-tag mb-4">CLI Reference</div>
           <h2 class="section-heading mb-4">Every command, documented.</h2>
           <p class="text-sb-muted text-lg mb-12 max-w-2xl">
-            Run via <code class="code-inline">./shadow-bit</code> or
-            <code class="code-inline">node dist/cli/index.js</code>. Every
-            command that needs a password prompts for it invisibly by default —
-            pass <code class="code-inline">SHADOWBIT_PASSWORD</code> to
-            automate. <code class="code-inline">--password</code> still works
-            but is deprecated: it exposes the password to other users through
+            Run it as <code class="code-inline">shadow-bit</code>. Every command
+            that needs a password prompts for it invisibly by default — pass
+            <code class="code-inline">SHADOWBIT_PASSWORD</code> to automate.
+            <code class="code-inline">--password</code> still works but is
+            deprecated: it exposes the password to other users through
             <code class="code-inline">ps</code> and to your shell history.
           </p>
 
@@ -434,10 +442,12 @@ ls &lt;working-folder&gt;
       <section id="gui" class="py-24 px-6">
         <div class="max-w-6xl mx-auto">
           <div class="section-tag mb-4">Desktop App</div>
-          <h2 class="section-heading mb-4">A native GUI for every platform.</h2>
+          <h2 class="section-heading mb-4">The whole app, four tabs.</h2>
           <p class="text-sb-muted text-lg mb-12 max-w-2xl">
-            The Electron app shares the same cryptographic core as the CLI. Four
-            tabs cover every workflow — no terminal required.
+            The desktop app opens the same vault files as the CLI — no terminal
+            required. Download it from the
+            <a href="#install" class="link-underline">Download</a> section
+            above.
           </p>
 
           <div class="gui-container">
@@ -452,18 +462,11 @@ ls &lt;working-folder&gt;
             <div id="gui-content" class="gui-content"></div>
           </div>
 
-          <!-- Launch command -->
+          <!-- Download call to action -->
           <div class="mt-8 flex flex-wrap gap-4 items-center">
-            <div class="terminal-inline flex-1 min-w-0">
-              <span class="term-prompt">$</span>
-              <span class="term-cmd">npm run gui</span>
-              <span class="term-comment"># build + launch Electron</span>
-            </div>
-            <div class="terminal-inline flex-1 min-w-0">
-              <span class="term-prompt">$</span>
-              <span class="term-cmd">npm run gui:dev</span>
-              <span class="term-comment"># launch without rebuilding</span>
-            </div>
+            <a href="#install" class="btn-primary"
+              >Download for your platform</a
+            >
           </div>
         </div>
       </section>
@@ -634,20 +637,6 @@ ls &lt;working-folder&gt;
           </div>
         </div>
       </section>
-
-      <!-- ─── ARCHITECTURE ─────────────────────────────────────────────────── -->
-      <section id="architecture" class="py-24 px-6 section-alt">
-        <div class="max-w-5xl mx-auto">
-          <div class="section-tag mb-4">Architecture</div>
-          <h2 class="section-heading mb-4">Clean, layered design.</h2>
-          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
-            The cryptographic core is UI-agnostic. The CLI and Electron GUI are
-            thin frontends over the same engine.
-          </p>
-
-          <div id="arch-tree" class="arch-tree"></div>
-        </div>
-      </section>
     </main>
 
     <!-- ─── FOOTER ────────────────────────────────────────────────────────── -->
@@ -669,7 +658,7 @@ ls &lt;working-folder&gt;
             <ul class="footer-links">
               <li><a href="#features">Features</a></li>
               <li><a href="#how-it-works">How It Works</a></li>
-              <li><a href="#install">Installation</a></li>
+              <li><a href="#install">Download</a></li>
               <li><a href="#workflows">Recipes</a></li>
               <li><a href="#faq">Q&amp;A</a></li>
               <li><a href="#cli">CLI Reference</a></li>
@@ -686,7 +675,7 @@ ls &lt;working-folder&gt;
               <li><a href="#security">Threat Model</a></li>
               <li><a href="#security">Audit Report</a></li>
               <li><a href="#format">Vault Format</a></li>
-              <li><a href="#architecture">Architecture</a></li>
+              <li><a href="dev.html">For developers</a></li>
             </ul>
           </div>
         </div>
@@ -740,28 +729,91 @@ ls &lt;working-folder&gt;
       </div>
     </template>
 
-    <template id="install-step-tpl">
-      <div class="install-step">
-        <div class="install-step-title" data-field="title"></div>
-        <div class="install-step-code-wrapper">
-          <button type="button" class="copy-btn" aria-label="Copy code">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-              <path
-                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-              />
-            </svg>
-          </button>
-          <pre class="install-code"><code data-field="code"></code></pre>
+    <!-- The shared copy button. A template because the icon is inline SVG —
+         markup built as a string in JS is forbidden, and building it node by
+         node is the same markup with more ways to get an attribute wrong. -->
+    <template id="copy-btn-tpl">
+      <button type="button" class="copy-btn">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 0 0 1-2-2V4a2 0 0 1 2-2h9a2 0 0 1 2 2v1" />
+        </svg>
+      </button>
+    </template>
+
+    <!-- One downloadable build. The anchor's href is assembled in index.js
+         from the repository URL + tag + file name, so a version bump cannot
+         leave a hand-written link pointing at a build that was never uploaded. -->
+    <template id="download-build-tpl">
+      <a class="download-build">
+        <div class="download-build-main">
+          <div class="download-build-label" data-field="label"></div>
+          <div class="download-build-meta">
+            <span class="download-build-format" data-field="format"></span>
+            <span class="download-build-arch" data-field="arch"></span>
+            <span class="download-build-size" data-field="size"></span>
+          </div>
         </div>
-      </div>
+        <span class="download-build-action">
+          <span data-field="action"></span>
+          <svg
+            class="download-build-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M13 7l5 5m0 0l-5 5m5-5H6"
+            />
+          </svg>
+        </span>
+      </a>
+    </template>
+
+    <!-- One install step. Numbered, prose only — the download already
+         happened, so these describe what to do with the file in hand. -->
+    <template id="install-step-tpl">
+      <li class="install-step">
+        <span
+          class="install-step-num"
+          data-field="num"
+          aria-hidden="true"
+        ></span>
+        <div class="install-step-body">
+          <div class="install-step-title" data-field="title"></div>
+          <div class="install-step-desc" data-field="desc"></div>
+          <div class="install-step-code-wrapper" data-field="code-wrapper">
+            <button type="button" class="copy-btn" aria-label="Copy code">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 0 0 1-2-2V4a2 0 0 1 2-2h9a2 0 0 1 2 2v1" />
+              </svg>
+            </button>
+            <pre class="install-code"><code data-field="code"></code></pre>
+          </div>
+        </div>
+      </li>
     </template>
 
     <template id="cli-row-tpl">
@@ -822,23 +874,6 @@ ls &lt;working-folder&gt;
           class="text-xs text-sb-cyan mt-3 font-semibold"
           data-field="audience"
         ></div>
-      </div>
-    </template>
-
-    <template id="arch-module-tpl">
-      <div class="arch-module">
-        <div class="arch-module-header">
-          <span class="arch-module-path font-mono" data-field="path"></span>
-          <span class="arch-module-desc" data-field="desc"></span>
-        </div>
-        <div class="arch-module-files" data-field="files-container"></div>
-      </div>
-    </template>
-
-    <template id="arch-file-tpl">
-      <div class="arch-file">
-        <span class="arch-file-name font-mono" data-field="name"></span>
-        <span class="arch-file-desc" data-field="desc"></span>
       </div>
     </template>
 

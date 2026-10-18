@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShadowBit — Developer Guide</title>
+    <meta
+      name="description"
+      content="Contributor documentation for ShadowBit: build from source, run the test suites, package installers, and a map of the source tree."
+    />
+    <meta name="robots" content="noindex" />
+
+    <!-- Same stylesheets as the main page, in the same order: utilities.css
+         wins ties against component rules, exactly as it does there. -->
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="utilities.css" />
+  </head>
+
+  <body class="bg-sb-bg text-sb-text antialiased">
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <!-- ─── NAVBAR ──────────────────────────────────────────────────────── -->
+    <header id="navbar" class="navbar fixed top-0 left-0 right-0 z-50">
+      <nav
+        class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"
+      >
+        <a href="index.html" class="nav-logo flex items-center gap-2">
+          <span class="logo-icon">🗝️</span>
+          <span class="font-bold text-lg tracking-tight text-white"
+            >ShadowBit</span
+          >
+          <span class="version-badge">dev</span>
+        </a>
+
+        <ul class="hidden md:flex items-center gap-1 text-sm">
+          <li><a href="#setup" class="nav-link">Build from source</a></li>
+          <li><a href="#testing" class="nav-link">Testing</a></li>
+          <li><a href="#packaging" class="nav-link">Packaging</a></li>
+          <li><a href="#architecture" class="nav-link">Source tree</a></li>
+        </ul>
+
+        <div class="flex items-center gap-3">
+          <a href="index.html" class="btn-primary text-sm">← Back to site</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main" class="pt-24">
+      <!-- ─── INTRO ────────────────────────────────────────────────────────── -->
+      <section id="intro" class="py-16 px-6">
+        <div class="max-w-4xl mx-auto">
+          <div class="section-tag mb-4">Developer Guide</div>
+          <h1 class="section-heading mb-4">Build ShadowBit yourself.</h1>
+          <p class="text-sb-muted text-lg mb-6 max-w-2xl">
+            Everything here is for contributors. If you just want to encrypt a
+            folder,
+            <a href="index.html#install" class="link-underline"
+              >download the app</a
+            >
+            instead — no toolchain required.
+          </p>
+          <p class="text-sb-muted max-w-2xl">
+            The full contributor guide, threat model, and the invariants that
+            are easy to break live in the repository:
+            <a
+              href="https://github.com/lucianvuc/shadow-bit#readme"
+              class="link-underline"
+              >README.md</a
+            >,
+            <a
+              href="https://github.com/lucianvuc/shadow-bit/blob/master/SECURITY.md"
+              class="link-underline"
+              >SECURITY.md</a
+            >
+            and
+            <a
+              href="https://github.com/lucianvuc/shadow-bit/blob/master/AGENTS.md"
+              class="link-underline"
+              >AGENTS.md</a
+            >.
+          </p>
+        </div>
+      </section>
+
+      <!-- ─── BUILD FROM SOURCE ────────────────────────────────────────────── -->
+      <section id="setup" class="py-24 px-6 section-alt">
+        <div class="max-w-4xl mx-auto">
+          <div class="section-tag mb-4">Setup</div>
+          <h2 class="section-heading mb-4">Build from source.</h2>
+
+          <div class="prose-muted mb-10">
+            <p class="text-sb-muted mb-3">Prerequisites:</p>
+            <ul id="dev-prereqs" class="prereq-list"></ul>
+          </div>
+
+          <div id="dev-steps"></div>
+          <div id="dev-note"></div>
+        </div>
+      </section>
+
+      <!-- ─── TESTING ─────────────────────────────────────────────────────── -->
+      <section id="testing" class="py-24 px-6">
+        <div class="max-w-4xl mx-auto">
+          <div class="section-tag mb-4">Testing</div>
+          <h2 class="section-heading mb-4">Run everything before you ship.</h2>
+          <p class="text-sb-muted text-lg mb-10 max-w-2xl">
+            <code class="code-inline">npm run verify</code> is the gate: it
+            builds, then runs the core suite, the CLI end-to-end suite, the real
+            desktop app under Electron, and the accessibility, responsive,
+            performance and docs-site suites. Prefer it over picking one script,
+            because a suite that only runs in CI is a suite that quietly rots.
+          </p>
+          <div id="dev-tests"></div>
+        </div>
+      </section>
+
+      <!-- ─── PACKAGING ───────────────────────────────────────────────────── -->
+      <section id="packaging" class="py-24 px-6 section-alt">
+        <div class="max-w-4xl mx-auto">
+          <div class="section-tag mb-4">Packaging</div>
+          <h2 class="section-heading mb-4">Produce installers.</h2>
+          <p class="text-sb-muted text-lg mb-10 max-w-2xl">
+            Packaging writes to <code class="code-inline">release/</code>. Those
+            artifacts are what the download buttons on
+            <a href="index.html#install" class="link-underline">the site</a>
+            link to, so the file names here and the labels there must agree.
+          </p>
+          <div id="dev-packaging"></div>
+        </div>
+      </section>
+
+      <!-- ─── ARCHITECTURE ────────────────────────────────────────────────── -->
+      <section id="architecture" class="py-24 px-6">
+        <div class="max-w-5xl mx-auto">
+          <div class="section-tag mb-4">Architecture</div>
+          <h2 class="section-heading mb-4">Clean, layered design.</h2>
+          <p class="text-sb-muted text-lg mb-12 max-w-2xl">
+            The cryptographic core is UI-agnostic. The CLI and the Electron GUI
+            are thin frontends over the same engine — which is why a vault
+            written by one opens in the other.
+          </p>
+
+          <div id="arch-tree" class="arch-tree"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ─── FOOTER ────────────────────────────────────────────────────────── -->
+    <footer class="footer py-12 px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="footer-bottom">
+          <div class="text-sm text-sb-muted/60" id="footer-meta"></div>
+          <div class="mt-3">
+            <a href="index.html" class="install-release-link"
+              >← Back to the ShadowBit site</a
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ─── TEMPLATES (cloned by dev.js) ─────────────────────────────────── -->
+    <template id="prereq-tpl">
+      <li class="prereq-item"></li>
+    </template>
+
+    <template id="dev-step-tpl">
+      <div class="install-step dev-step">
+        <div class="install-step-title" data-field="title"></div>
+        <div class="install-step-code-wrapper">
+          <button type="button" class="copy-btn" aria-label="Copy code">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 0 0 1-2-2V4a2 0 0 1 2-2h9a2 0 0 1 2 2v1" />
+            </svg>
+          </button>
+          <pre class="install-code"><code data-field="code"></code></pre>
+        </div>
+      </div>
+    </template>
+
+    <template id="arch-module-tpl">
+      <div class="arch-module">
+        <div class="arch-module-header">
+          <span class="arch-module-path font-mono" data-field="path"></span>
+          <span class="arch-module-desc" data-field="desc"></span>
+        </div>
+        <div class="arch-module-files" data-field="files-container"></div>
+      </div>
+    </template>
+
+    <template id="arch-file-tpl">
+      <div class="arch-file">
+        <span class="arch-file-name font-mono" data-field="name"></span>
+        <span class="arch-file-desc" data-field="desc"></span>
+      </div>
+    </template>
+
+    <script src="data.js"></script>
+    <script src="dev.js"></script>
+  </body>
+</html>

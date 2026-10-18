@@ -786,8 +786,74 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   INSTALLATION
+   DOWNLOAD
    ═══════════════════════════════════════════════════════════════════════ */
+/* Spacing wrappers used by the download section. They carry no styling of
+   their own — the test that checks every class resolves to a rule treats a
+   bare wrapper class as a missing rule, so declare it. */
+.version-picker,
+.cli-install {
+  display: block;
+}
+
+.download-build-main {
+  min-width: 0;
+}
+.download-build-size,
+.download-build-arch {
+  opacity: 0.85;
+}
+
+.version-picker-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+.version-picker-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sb-muted);
+}
+.version-picker-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.version-chip {
+  padding: 0.4rem 0.85rem;
+  background: var(--sb-bg-card);
+  border: 1px solid var(--sb-border);
+  border-radius: 999px;
+  color: var(--sb-muted);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+.version-chip:hover {
+  color: var(--sb-text);
+  border-color: var(--sb-cyan);
+}
+.version-chip.active {
+  color: var(--sb-bg);
+  background: var(--sb-cyan);
+  border-color: var(--sb-cyan);
+  font-weight: 600;
+}
+.version-picker-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--sb-muted);
+  opacity: 0.8;
+}
+
 .install-tabs {
   border-bottom: 1px solid var(--sb-border);
   padding-bottom: 0;
@@ -817,6 +883,219 @@ body {
   color: var(--sb-cyan);
   border-bottom-color: var(--sb-cyan);
 }
+/* The detected-platform hint. A hint, not a filter: every platform tab stays
+   visible and clickable beside it. */
+.install-tab-badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--sb-cyan);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.install-panel-heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--sb-text);
+}
+
+.download-builds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.download-build {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--sb-bg-card);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius);
+  color: var(--sb-text);
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.download-build:hover {
+  border-color: var(--sb-cyan);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.download-build.primary {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(
+    180deg,
+    rgba(56, 189, 248, 0.06),
+    transparent 60%
+  );
+}
+.download-build-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.download-build-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--sb-muted);
+}
+.download-build-format {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  color: var(--sb-cyan);
+}
+.download-build-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sb-cyan);
+}
+.download-build-icon {
+  transition: transform 0.2s;
+}
+.download-build:hover .download-build-icon {
+  transform: translateX(2px);
+}
+
+.install-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  counter-reset: install-step;
+}
+.install-step {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+.install-step-num {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--sb-cyan);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+.install-step-body {
+  flex: 1;
+  min-width: 0;
+}
+.install-step-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--sb-text);
+}
+.install-step-desc {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  color: var(--sb-muted);
+  line-height: 1.6;
+}
+.install-step-code-wrapper {
+  margin-top: 0.6rem;
+  background: var(--sb-bg);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.install-release-link {
+  display: inline-block;
+  font-size: 0.82rem;
+  color: var(--sb-cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.install-release-link:hover {
+  color: var(--sb-text);
+}
+
+.all-releases {
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--sb-border);
+}
+
+.cli-install-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  align-items: flex-start;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--sb-border);
+}
+.cli-install-desc {
+  font-size: 0.88rem;
+  color: var(--sb-muted);
+  line-height: 1.6;
+}
+.all-releases-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+.release-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.release-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: var(--sb-bg-card);
+  border: 1px solid var(--sb-border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+.release-link {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  color: var(--sb-cyan);
+}
+.release-meta {
+  color: var(--sb-muted);
+  opacity: 0.8;
+}
+.release-current {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--sb-cyan);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.link-underline {
+  color: var(--sb-cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .install-panel {
   display: none;
@@ -828,20 +1107,6 @@ body {
   display: flex;
 }
 
-.install-step {
-  background: var(--sb-bg-card);
-  border: 1px solid var(--sb-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.install-step-title {
-  padding: 0.75rem 1.25rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--sb-muted);
-  border-bottom: 1px solid var(--sb-border);
-  background: rgba(255, 255, 255, 0.02);
-}
 .install-step-code-wrapper {
   position: relative;
 }
@@ -869,6 +1134,76 @@ body {
 }
 .install-note::before {
   content: "ℹ️  ";
+}
+
+/* Bare wrapper used to group the prerequisite intro on the dev page. */
+.prose-muted {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DEVELOPER PAGE (dev.html only)
+   ═══════════════════════════════════════════════════════════════════════ */
+.prereq-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.prereq-item {
+  position: relative;
+  padding-left: 1.4rem;
+  font-size: 0.9rem;
+  color: var(--sb-muted);
+  line-height: 1.6;
+}
+.prereq-item::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: var(--sb-cyan);
+}
+
+.dev-step {
+  margin-bottom: 1rem;
+}
+/* The dev page reuses the card styling of the old install steps, so the
+   step's flex-row layout (number + body) does not apply here. */
+.dev-step {
+  display: block;
+  background: var(--sb-bg-card);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.dev-step .install-step-title {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sb-muted);
+  border-bottom: 1px solid var(--sb-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.test-suite {
+  padding: 1rem 1.25rem;
+  background: var(--sb-bg-card);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+}
+.test-suite-cmd {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.85rem;
+  color: var(--sb-cyan);
+}
+.test-suite-desc {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--sb-muted);
+  line-height: 1.6;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

@@ -83,7 +83,7 @@ window.APP_DATA = {
     {
       icon: "🖥️",
       title: "CLI + Desktop App",
-      desc: "Full-featured command-line interface for scripting and automation, plus an Electron desktop app for a friendly GUI. Both share the same cryptographic core.",
+      desc: "A desktop app for everyday use and a complete command-line interface for scripting and automation — two frontends over one encrypted vault format, so a file created in either opens in the other.",
     },
     {
       icon: "🔬",
@@ -128,101 +128,167 @@ window.APP_DATA = {
     },
   ],
 
-  // ─── Installation ─────────────────────────────────────────────────────
-  installTabs: [
+  // ─── Downloads ────────────────────────────────────────────────────────
+  //
+  // End-user install surface. Every artifact is a packaged desktop build
+  // uploaded to the GitHub Release for its tag; the URLs are assembled at
+  // render time from `releases.repo` + the tag, so a version bump never
+  // leaves a hand-written URL pointing at a build that no longer exists.
+  //
+  // `detect` drives the "your platform" badge: it is matched against the
+  // user-agent, which is the only OS signal available to a page that must run
+  // over file:// with no server-side logic. It is a hint, never a filter.
+  releases: {
+    repo: "https://github.com/lucianvuc/shadow-bit",
+    /**
+     * PREVIOUS releases only, newest first. The current version is NOT listed
+     * here — it is `meta.version`, and the page prepends it to this list.
+     *
+     * That split is deliberate, not tidiness. `npm version` rewrites every
+     * anchored version literal in this file, so a list of past releases kept in
+     * the same shape as the current one would have 1.0.0 rewritten to 1.1.4 on
+     * the next bump — the site would then offer a download for a version that
+     * never existed and lose the real 1.0.0.
+     *
+     * The key is `release`, not `version`, and it has to stay that way: the
+     * bump module anchors the current version on the text `version: "`, which
+     * would also match a history entry spelled the same way. e2e/nfr.site.test.ts
+     * replays a real bump and fails if the history moves.
+     */
+    versions: [
+      { release: "1.1.2", released: "2026-10-12" },
+      { release: "1.1.0", released: "2026-09-28" },
+      {
+        release: "1.0.0",
+        released: "2026-09-05",
+        notes: "First public release.",
+      },
+    ],
+  },
+
+  platforms: [
     {
       id: "macos",
       label: "macOS",
       icon: "🍎",
-      steps: [
+      detect: ["mac"],
+      // Sizes are approximate and are for orientation only.
+      builds: [
         {
-          title: "Clone & install dependencies",
-          code: "git clone https://github.com/lucianvuc/shadow-bit.git\ncd shadow-bit\nnpm install",
+          label: "macOS — Apple Silicon",
+          file: "ShadowBit-1.1.3-arm64.dmg",
+          format: ".dmg",
+          size: "~99 MB",
+          primary: true,
+          arch: "M1 / M2 / M3 / M4",
         },
         {
-          title: "Build the desktop app",
-          code: "npm run icons\nnpm run package:mac\n# → release/mac-arm64/ShadowBit.app  (Apple Silicon)\n# → release/mac/ShadowBit.app        (Intel)",
-        },
-        {
-          title: "Or run the CLI directly (no build needed)",
-          code: "chmod +x shadow-bit\n./shadow-bit --help",
+          label: "macOS — Intel",
+          file: "ShadowBit-1.1.3-x64.dmg",
+          format: ".dmg",
+          size: "~100 MB",
+          arch: "Intel",
         },
       ],
-      note: "First launch: right-click → Open (bypasses Gatekeeper for unsigned apps).",
+      steps: [
+        {
+          title: "Open the downloaded disk image",
+          desc: "Double-click the .dmg file. A window opens showing the ShadowBit app.",
+        },
+        {
+          title: "Drag ShadowBit into Applications",
+          desc: "Drag the app icon onto the Applications folder, then eject the disk image.",
+        },
+        {
+          title: "Launch ShadowBit",
+          desc: "Open it from Applications. Double-clicking a .svlt vault file now opens it in ShadowBit.",
+        },
+      ],
+      note: "First launch: right-click the app in Applications → Open → Confirm. That bypasses the Gatekeeper warning the first time only.",
     },
     {
       id: "windows",
       label: "Windows",
       icon: "🪟",
-      steps: [
+      detect: ["win"],
+      builds: [
         {
-          title: "Install Node.js 20+ from nodejs.org",
-          code: "# Download LTS from https://nodejs.org",
-        },
-        {
-          title: "Clone & build",
-          code: "git clone https://github.com/lucianvuc/shadow-bit.git\ncd shadow-bit\nnpm install\nnpm run build",
-        },
-        {
-          title: "Build the Windows installer",
-          code: "npm run package:win\n# → release\\ShadowBit Setup 1.1.3.exe",
-        },
-        {
-          title: "CLI without packaging",
-          code: "node dist\\cli\\index.js --help",
+          label: "Windows 10 / 11",
+          file: "ShadowBit Setup 1.1.3.exe",
+          format: ".exe installer",
+          size: "~98 MB",
+          primary: true,
+          arch: "64-bit",
         },
       ],
-      note: "The installer places ShadowBit in Program Files and adds a Start Menu shortcut.",
+      steps: [
+        {
+          title: "Run the installer",
+          desc: "Double-click the downloaded .exe. It is a standard installer — no scripts or command line needed.",
+        },
+        {
+          title: "Follow the prompts",
+          desc: "Choose where to install. The default is Program Files; a Start Menu shortcut is added.",
+        },
+        {
+          title: "Launch ShadowBit",
+          desc: "Open it from the Start Menu or by double-clicking any .svlt file.",
+        },
+      ],
+      note: "If Windows SmartScreen warns about an unrecognised app, choose More info → Run anyway. This happens once, for unsigned builds.",
     },
     {
       id: "linux",
       label: "Linux",
       icon: "🐧",
-      steps: [
+      detect: ["linux", "x11"],
+      builds: [
         {
-          title: "Install Node.js 20+",
-          code: "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -\nsudo apt-get install -y nodejs",
+          label: "Linux — AppImage",
+          file: "ShadowBit-1.1.3.AppImage",
+          format: ".AppImage",
+          size: "~120 MB",
+          primary: true,
+          arch: "64-bit, any distro",
         },
         {
-          title: "Clone & build",
-          code: "git clone https://github.com/lucianvuc/shadow-bit.git\ncd shadow-bit\nnpm install && npm run build",
-        },
-        {
-          title: "Build AppImage",
-          code: 'npm run package:linux\nchmod +x "release/ShadowBit-1.1.3.AppImage"\n./release/"ShadowBit-1.1.3.AppImage"',
-        },
-        {
-          title: "CLI (global install)",
-          code: 'chmod +x shadow-bit\nsudo ln -s "$(pwd)/shadow-bit" /usr/local/bin/shadow-bit',
-        },
-      ],
-      note: "AppImage runs on any modern Linux distro without installation. A .deb is also produced.",
-    },
-    {
-      id: "source",
-      label: "From Source",
-      icon: "⚙️",
-      steps: [
-        {
-          title: "Clone & install",
-          code: "git clone https://github.com/lucianvuc/shadow-bit.git\ncd shadow-bit\nnpm install",
-        },
-        {
-          title: "Run the CLI from source (no build needed)",
-          code: "./shadow-bit create myvault",
-        },
-        {
-          title: "Run the GUI from source",
-          code: "npm run gui",
-        },
-        {
-          title: "Build compiled output",
-          code: "npm run build\n# tsc → dist/ + copies GUI assets",
+          label: "Linux — Debian / Ubuntu package",
+          file: "shadow-bit_1.1.3_amd64.deb",
+          format: ".deb",
+          size: "~95 MB",
+          arch: "64-bit, Debian family",
         },
       ],
-      note: "Uses tsx to run TypeScript directly. Ideal for development or trying the project without a packaging step.",
+      steps: [
+        {
+          title: "Make it executable",
+          desc: "Open your Downloads folder in a terminal and mark the downloaded .AppImage as executable:",
+          code: 'chmod +x "{file}"',
+        },
+        {
+          title: "Run it",
+          desc: "Double-click the file in your file manager, or launch it from that same terminal:",
+          code: "./{file}",
+        },
+        {
+          title: "Or install the .deb",
+          desc: "Prefer a normal system install? Use the Debian package instead — it adds a menu entry and file association.",
+        },
+      ],
+      note: "The AppImage runs on any modern 64-bit Linux distribution without installing anything.",
     },
   ],
+
+  // ─── Installation: command line ────────────────────────────────────────
+  //
+  // The desktop app is the primary install path above. The CLI is installed
+  // with a single command for people who already work in a terminal.
+  cliInstall: {
+    title: "Prefer the command line?",
+    desc: "The CLI is the same engine the desktop app uses. Install it with one command — no build step, no dependencies to manage.",
+    code: "npm install -g shadow-bit\nshadow-bit --help",
+    note: "Every command that needs a password prompts for it invisibly. Nothing is stored in your shell history.",
+  },
 
   // ─── CLI command reference ────────────────────────────────────────────
   commands: [
@@ -727,6 +793,52 @@ window.APP_DATA = {
       ],
     },
   ],
+
+  // ─── Developer documentation (docs/dev.html only) ──────────────────────
+  //
+  // Contributor-facing content lives here and is rendered by dev.html. It is
+  // deliberately NOT part of index.html: the marketing page is for people who
+  // want to use ShadowBit, and a source tree is noise to them.
+  //
+  // The architecture[] entries describing a module no command can reach
+  // (hidden.ts, stego.ts) must keep saying so here, exactly as they did on the
+  // main page — see docs/AGENTS.md, "Content accuracy".
+  devSetup: {
+    prerequisites: [
+      "Node.js 20 or newer",
+      "npm (ships with Node.js)",
+      "No C toolchain needed — every cryptographic primitive comes from Node's own built-ins",
+    ],
+    steps: [
+      {
+        title: "Clone and install dependencies",
+        code: "git clone https://github.com/lucianvuc/shadow-bit.git\ncd shadow-bit\nnpm install",
+      },
+      {
+        title: "Run the CLI straight from source (no build step)",
+        code: "npm run cli -- --help\n# or, without npm:\n./shadow-bit --help",
+      },
+      {
+        title: "Build the desktop app and launch it",
+        code: "npm run gui\n# build + launch\nnpm run gui:dev\n# launch without rebuilding",
+      },
+      {
+        title: "Run the tests",
+        code: "npm run verify\n# build + core tests + CLI E2E + GUI smoke + accessibility/responsive/performance/site suites",
+      },
+    ],
+    packaging: [
+      {
+        title: "Produce installers",
+        code: "npm run package:mac     # .dmg + .zip  (macOS host only)\nnpm run package:win     # .exe          (needs wine on Linux)\nnpm run package:linux   # .AppImage + .deb\n\n# output lands in release/",
+      },
+      {
+        title: "Smoke-test a packaged build",
+        code: "npm run package:dir\nnpm run test:packaged\n# catches what a dist/ run cannot: a file that only\n# exists inside the packaged app layout",
+      },
+    ],
+    note: "macOS and Windows artifacts must be built on their own OS — code signing and notarization require it. See README.md for the full developer guide.",
+  },
 
   // ─── Architecture ─────────────────────────────────────────────────────
   architecture: [
