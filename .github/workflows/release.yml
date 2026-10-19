@@ -147,6 +147,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           WIN_CSC_LINK: ${{ secrets.WIN_CERT_PFX }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+        # Explicit bash: this matrix leg runs on windows-latest, where the
+        # default `run` shell is PowerShell. The `${!v:-}` indirection and
+        # `>> "$GITHUB_ENV"` below are bash, and PowerShell parses neither -
+        # it failed with a bare "Process completed with exit code 1".
+        shell: bash
         run: |
           signed=0
           for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID \
