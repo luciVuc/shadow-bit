@@ -120,6 +120,7 @@ jobs:
         run: npm ci
       - name: Read version
         id: version
+        shell: bash
         # The single source of truth for the version, read from the same
         # package.json electron-builder will read. Sourced rather than echoed so
         # a drifted tag (v2.0.0 pushed from a 1.9.9 package.json) surfaces here
@@ -203,19 +204,38 @@ jobs:
       # visible.
       - name: Resolve artifact glob
         id: glob
+        # Fail loudly if the version came back empty. It did exactly this once:
+        # `steps.version.outputs.v` was empty because the step that sets it ran
+        # under PowerShell, the sed substituted nothing, and the resulting glob
+        # `release/windows//*.exe` matched no files. upload-artifact only
+        # WARNED about that, publish then found 0 artifacts, and the release
+        # died three steps later at "Pattern does not match any files" — an
+        # error that named none of the real cause.
         # bash for the same reason as the signing step: this leg runs on
         # windows-latest, where the default shell is PowerShell and `sed` is
         # not on PATH. PowerShell silently produced an EMPTY path, so
         # upload-artifact failed with "Input required and not supplied: path" —
         # no glob, no upload, and a bare error that names nothing.
         shell: bash
-        run: echo "path=${{ matrix.artifact }}" | sed "s/{v}/${{ steps.version.outputs.v }}/" >> "$GITHUB_OUTPUT"
+        run: |
+          v="${{ steps.version.outputs.v }}"
+          if [ -z "$v" ]; then
+            echo "::error::version is empty - the Read version step did not run correctly"
+            exit 1
+          fi
+          echo "path=${{ matrix.artifact }}" | sed "s/{v}/$v/" >> "$GITHUB_OUTPUT"
+          echo "resolved: $(cat "$GITHUB_OUTPUT")"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
           path: ${{ steps.glob.outputs.path }}
           retention-days: 7
+          # `warn` (the default) lets a broken glob pass silently: the job goes
+          # green having uploaded nothing, and the release fails much later with
+          # an error that points nowhere near the cause. `error` fails HERE,
+          # naming the step that produced no files.
+          if-no-files-found: error
 
   publish:
     name: Publish GitHub Release
