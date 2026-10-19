@@ -710,10 +710,11 @@ describe("download links are built to survive a version bump", () => {
   test("the version list leads with the current app version", () => {
     const data = readAppData();
     const versions = data.releases.versions;
-    assert.ok(
-      versions.length > 0,
-      "expected at least one previous release listed",
-    );
+    // An empty history is legitimate — that is the state of a project's FIRST
+    // release, where only meta.version exists. Asserting it is non-empty was
+    // wrong: it made the suite fail on the one configuration that is actually
+    // correct for v1.1.4, and would have pushed someone to invent a fake
+    // earlier release just to make the test green.
     // The current version must NOT be in the history array, and the history
     // must be keyed `release` rather than `version`. `npm version` anchors the
     // current version on the text `version: "`, so a history entry spelled that
