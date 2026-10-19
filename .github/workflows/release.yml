@@ -100,15 +100,28 @@ jobs:
           # matrix is expanded before any step runs, so `steps.version.outputs`
           # is not available here. The upload step substitutes the version it
           # read from package.json.
+          #
+          # These use one pattern per extension, never brace expansion.
+          # `release/linux/1.1.5/*.{AppImage,deb}` -- the form this workflow
+          # used originally -- matches NOTHING under upload-artifact's glob
+          # implementation, which does not expand braces. That is why an early
+          # publish attempt uploaded zero artifacts while every package job
+          # reported success, and why the failure surfaced two steps later at
+          # "Pattern does not match any files".
           - os: macos-latest
             target: mac
-            artifact: "release/macos/{v}/*.{dmg,zip}"
+            artifact: |
+              release/macos/{v}/*.dmg
+              release/macos/{v}/*.zip
           - os: windows-latest
             target: win
-            artifact: "release/windows/{v}/*.exe"
+            artifact: |
+              release/windows/{v}/*.exe
           - os: ubuntu-latest
             target: linux
-            artifact: "release/linux/{v}/*.{AppImage,deb}"
+            artifact: |
+              release/linux/{v}/*.AppImage
+              release/linux/{v}/*.deb
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -223,13 +236,18 @@ jobs:
             echo "::error::version is empty - the Read version step did not run correctly"
             exit 1
           fi
-          echo "path=${{ matrix.artifact }}" | sed "s/{v}/$v/" >> "$GITHUB_OUTPUT"
-          echo "resolved: $(cat "$GITHUB_OUTPUT")"
+          {
+            echo "paths<<GITHUB_OUTPUT"
+            echo "${{ matrix.artifact }}" | sed "s/{v}/$v/g"
+            echo "GITHUB_OUTPUT"
+          } >> "$GITHUB_OUTPUT"
+          echo "resolved upload globs:"
+          sed -n "/^paths<<GITHUB_OUTPUT$/,/^GITHUB_OUTPUT$/p" "$GITHUB_OUTPUT" | sed "1d;$d"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
-          path: ${{ steps.glob.outputs.path }}
+          path: ${{ steps.glob.outputs.paths }}
           retention-days: 7
           # `warn` (the default) lets a broken glob pass silently: the job goes
           # green having uploaded nothing, and the release fails much later with
