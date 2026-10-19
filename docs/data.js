@@ -152,6 +152,13 @@ window.APP_DATA = {
      * PREVIOUS releases only, newest first. The current version is NOT listed
      * here — it is `meta.version`, and the page prepends it to this list.
      *
+     * v1.1.4 is the first published release, so this list starts empty: a
+     * version belongs here only once its GitHub Release exists.
+     * `npm run check-releases` enforces exactly that, because a well-formed
+     * link to a release that does not exist is still a 404 — which is how the
+     * site once advertised 1.0.0/1.1.0/1.1.2 while the repository had no
+     * releases at all.
+     *
      * That split is deliberate, not tidiness. `npm version` rewrites every
      * anchored version literal in this file, so a list of past releases kept in
      * the same shape as the current one would have 1.0.0 rewritten to 1.1.4 on
@@ -163,15 +170,10 @@ window.APP_DATA = {
      * would also match a history entry spelled the same way. e2e/nfr.site.test.ts
      * replays a real bump and fails if the history moves.
      */
-    versions: [
-      { release: "1.1.2", released: "2026-10-12" },
-      { release: "1.1.0", released: "2026-09-28" },
-      {
-        release: "1.0.0",
-        released: "2026-09-05",
-        notes: "First public release.",
-      },
-    ],
+    // To add a release history entry: publish the release (tag + CI), then
+    // add `{ release: "x.y.z", released: "YYYY-MM-DD" }` here. Adding it
+    // BEFORE the release exists fails `npm run check-releases`.
+    versions: [],
   },
 
   platforms: [

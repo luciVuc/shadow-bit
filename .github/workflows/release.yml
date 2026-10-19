@@ -86,18 +86,22 @@ jobs:
           # artifact from another platform or version landing in this release.
           # Paths are relative to the workspace root because upload-artifact globs
           # from there, not from the `path` directory.
+          # `artifact` is the upload glob. It is anchored on the version
+          # directory built above, and it deliberately does NOT include the
+          # `*-unpacked` trees — see the comment on the upload step.
+          # `{v}` is a literal placeholder, NOT GitHub expression syntax: the
+          # matrix is expanded before any step runs, so `steps.version.outputs`
+          # is not available here. The upload step substitutes the version it
+          # read from package.json.
           - os: macos-latest
             target: mac
-            dir: release/macos
-            artifact: "release/macos/**/*.{dmg,zip}"
+            artifact: "release/macos/{v}/*.{dmg,zip}"
           - os: windows-latest
             target: win
-            dir: release/windows
-            artifact: "release/windows/**/*.exe"
+            artifact: "release/windows/{v}/*.exe"
           - os: ubuntu-latest
             target: linux
-            dir: release/linux
-            artifact: "release/linux/**/*.{AppImage,deb}"
+            artifact: "release/linux/{v}/*.{AppImage,deb}"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -175,11 +179,29 @@ jobs:
         run: node scripts/package.mjs ${{ matrix.target }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Upload ONLY the installers, never the unpacked app tree.
+      #
+      # `path: <version dir>/` uploads win-unpacked/, linux-unpacked/,
+      # mac-arm64/ and every .pak and .dylib inside them — 79 files for the
+      # Windows leg alone. Those then collide during the merge-multiple
+      # download in `publish` (locale.pak and friends exist in every tree),
+      # and the collision is not a merge conflict so it is silent: the v1.1.4
+      # run produced a release with 27 unpacked-app files attached as assets
+      # and NO Windows installer at all, because "ShadowBit Setup 1.1.4.exe"
+      # was one of the files a same-named upload clobbered.
+      #
+      # So each leg uploads exactly the artifacts its platform produces. If a
+      # platform ever starts producing a different extension, that leg's glob
+      # has to change too — which is the correct place for that change to be
+      # visible.
+      - name: Resolve artifact glob
+        id: glob
+        run: echo "path=${{ matrix.artifact }}" | sed "s/{v}/${{ steps.version.outputs.v }}/" >> "$GITHUB_OUTPUT"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
-          path: ${{ matrix.dir }}/${{ steps.version.outputs.v }}/
+          path: ${{ steps.glob.outputs.path }}
           retention-days: 7
 
   publish:
@@ -189,6 +211,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      # `merge-multiple` is safe only now that each leg uploads installers
+      # with distinct names. With the unpacked trees included it flattened
+      # three platforms' worth of identically-named library files into one
+      # directory and silently dropped the Windows installer.
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
