@@ -5,7 +5,7 @@ window.APP_DATA = {
     title: "ShadowBit",
     tagline: "One encrypted file. One password. No accounts, no cloud.",
     subTagline: "Lock a folder into a single .svlt file and send it anywhere.",
-    version: "1.1.4",
+    version: "1.1.5",
     // Owner is `luciVuc` — GitHub does NOT redirect on owner-name case, so the
     // lowercase spelling 404s. This was hand-transcribed from the author email
     // once and every download link on the site 404'd because of it.
@@ -152,7 +152,7 @@ window.APP_DATA = {
      * PREVIOUS releases only, newest first. The current version is NOT listed
      * here — it is `meta.version`, and the page prepends it to this list.
      *
-     * v1.1.4 is the first published release, so this list starts empty: a
+     * The list starts empty because v1.1.5 is the first published release: a
      * version belongs here only once its GitHub Release exists.
      * `npm run check-releases` enforces exactly that, because a well-formed
      * link to a release that does not exist is still a 404 — which is how the
@@ -186,7 +186,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "macOS — Apple Silicon",
-          file: "ShadowBit-1.1.4-arm64.dmg",
+          file: "ShadowBit-1.1.5-arm64.dmg",
           format: ".dmg",
           size: "~99 MB",
           primary: true,
@@ -194,7 +194,7 @@ window.APP_DATA = {
         },
         {
           label: "macOS — Intel",
-          file: "ShadowBit-1.1.4-x64.dmg",
+          file: "ShadowBit-1.1.5-x64.dmg",
           format: ".dmg",
           size: "~100 MB",
           arch: "Intel",
@@ -224,7 +224,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Windows 10 / 11",
-          file: "ShadowBit Setup 1.1.4.exe",
+          file: "ShadowBit Setup 1.1.5.exe",
           format: ".exe installer",
           size: "~98 MB",
           primary: true,
@@ -255,7 +255,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Linux — AppImage",
-          file: "ShadowBit-1.1.4.AppImage",
+          file: "ShadowBit-1.1.5.AppImage",
           format: ".AppImage",
           size: "~120 MB",
           primary: true,
@@ -263,7 +263,7 @@ window.APP_DATA = {
         },
         {
           label: "Linux — Debian / Ubuntu package",
-          file: "shadow-bit_1.1.4_amd64.deb",
+          file: "shadow-bit_1.1.5_amd64.deb",
           format: ".deb",
           size: "~95 MB",
           arch: "64-bit, Debian family",

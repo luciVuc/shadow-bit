@@ -83,18 +83,12 @@ const LITERAL_SITES = [
     before: "shadow-bit_",
     after: "_amd64.deb",
   },
-  {
-    file: "QUICKSTART.md",
-    label: "Windows NSIS installer name",
-    before: "ShadowBit Setup ",
-    after: ".exe",
-  },
-  {
-    file: "QUICKSTART.md",
-    label: "Linux AppImage name",
-    before: "ShadowBit-",
-    after: ".AppImage",
-  },
+  // QUICKSTART.md deliberately has NO version literal sites: its build-output
+  // examples use `<version>` placeholders, so there is nothing to keep in
+  // step. It previously hardcoded `release/linux/1.1.3/ShadowBit-1.1.5.AppImage`
+  // — a path segment and a file version that could disagree with each other,
+  // and that drifted on every bump until `npm version` rewrote the file name
+  // and left the directory stale.
 ];
 
 function escapeRe(s) {

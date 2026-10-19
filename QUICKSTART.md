@@ -62,8 +62,8 @@ cd shadow-bit
 npm install
 npm run icons
 npm run package:mac
-# → release/macos/1.1.3/mac-arm64/ShadowBit.app   (Apple Silicon)
-# → release/macos/1.1.3/mac/ShadowBit.app         (Intel — different directory name)
+# → release/macos/<version>/mac-arm64/ShadowBit.app   (Apple Silicon)
+# → release/macos/<version>/mac/ShadowBit.app         (Intel — different directory name)
 ```
 
 Copy `ShadowBit.app` to `/Applications`. First launch: right-click → **Open**
@@ -96,7 +96,7 @@ echo 'export PATH="$PATH:'"$(pwd)"'"' >> ~/.zshrc && source ~/.zshrc
 3. Build the installer:
    ```powershell
    npm run package:win
-   # → release\windows\1.1.3\ShadowBit Setup 1.1.4.exe
+   # → release\windows\<version>\ShadowBit Setup <version>.exe
    ```
 4. Run the installer — it places the app in Program Files with a Start Menu shortcut.
 
@@ -122,8 +122,8 @@ npm install && npm run build
 
 # Build AppImage
 npm run package:linux
-chmod +x "release/linux/1.1.3/ShadowBit-1.1.4.AppImage"
-./release/linux/1.1.3/"ShadowBit-1.1.4.AppImage"
+chmod +x "release/linux/<version>/ShadowBit-<version>.AppImage"
+./release/linux/<version>/"ShadowBit-<version>.AppImage"
 ```
 
 **CLI on Linux:**
