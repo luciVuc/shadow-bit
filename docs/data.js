@@ -6,7 +6,12 @@ window.APP_DATA = {
     tagline: "One encrypted file. One password. No accounts, no cloud.",
     subTagline: "Lock a folder into a single .svlt file and send it anywhere.",
     version: "1.1.4",
-    github: "https://github.com/lucianvuc/shadow-bit",
+    // Owner is `luciVuc` — GitHub does NOT redirect on owner-name case, so the
+    // lowercase spelling 404s. This was hand-transcribed from the author email
+    // once and every download link on the site 404'd because of it.
+    // `npm run check-repo-url` fails the build if this and package.json's
+    // repository.url disagree; see scripts/sync-repo-url.js.
+    github: "https://github.com/luciVuc/shadow-bit",
     license: "MIT",
   },
 
@@ -139,7 +144,10 @@ window.APP_DATA = {
   // user-agent, which is the only OS signal available to a page that must run
   // over file:// with no server-side logic. It is a hint, never a filter.
   releases: {
-    repo: "https://github.com/lucianvuc/shadow-bit",
+    // The canonical repo URL. Every download link is built from this, so it is
+    // the single place the casing has to be right — and it is the one that was
+    // wrong. Kept in step with package.json by scripts/sync-repo-url.js.
+    repo: "https://github.com/luciVuc/shadow-bit",
     /**
      * PREVIOUS releases only, newest first. The current version is NOT listed
      * here — it is `meta.version`, and the page prepends it to this list.
@@ -812,7 +820,7 @@ window.APP_DATA = {
     steps: [
       {
         title: "Clone and install dependencies",
-        code: "git clone https://github.com/lucianvuc/shadow-bit.git\ncd shadow-bit\nnpm install",
+        code: "git clone https://github.com/luciVuc/shadow-bit.git\ncd shadow-bit\nnpm install",
       },
       {
         title: "Run the CLI straight from source (no build step)",

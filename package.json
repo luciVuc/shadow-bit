@@ -29,6 +29,8 @@
     "copy-assets": "node scripts/copy-assets.js",
     "version": "node scripts/bump-version.js",
     "check-version": "node scripts/bump-version.js --check",
+    "sync-repo-url": "node scripts/sync-repo-url.js",
+    "check-releases": "node scripts/check-released-versions.js",
     "test": "node --import tsx --test src/test/*.test.ts",
     "test:gui": "node --import tsx --test e2e/smoke.test.ts",
     "test:gui:headless": "SHADOWBIT_HEADLESS=1 node --import tsx --test e2e/smoke.test.ts",
@@ -127,11 +129,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lucianvuc/shadow-bit.git"
+    "url": "https://github.com/luciVuc/shadow-bit.git"
   },
   "homepage": "https://shadowbit.app",
   "bugs": {
-    "url": "https://github.com/lucianvuc/shadow-bit/issues"
+    "url": "https://github.com/luciVuc/shadow-bit/issues"
   },
   "engines": {
     "node": ">=20"

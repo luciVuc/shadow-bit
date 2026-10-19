@@ -34,6 +34,20 @@ jobs:
         run: npm test
       - name: Run CLI end-to-end tests
         run: npm run test:cli-e2e
+      # The site's download links are built from a repo URL hardcoded in
+      # docs/. It was hand-transcribed once with the wrong owner casing and
+      # every download on the live site 404'd, because GitHub does not redirect
+      # on owner-name case. This fails the build if docs/ and package.json
+      # disagree about which repo this is.
+      - name: Check repo URL consistency
+        run: npm run sync-repo-url
+      # The version list is the other half: a well-formed link to a release
+      # that does not exist is still a 404, and that is exactly what shipped.
+      # Needs a token only to avoid the anonymous rate limit on large forks.
+      - name: Check advertised versions are published
+        run: npm run check-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   gui-headless:
     name: GUI smoke (headless Linux)

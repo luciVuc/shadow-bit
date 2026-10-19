@@ -537,6 +537,45 @@ describe("index.html is written for end users, not contributors", () => {
     assert.match(cliInstall, /npm install -g shadow-bit/);
   });
 
+  test("every GitHub link in docs/ names the same repo as package.json", () => {
+    // Owner-name casing is not cosmetic: GitHub does NOT redirect on it, so
+    // "lucianvuc/shadow-bit" 404s while "luciVuc/shadow-bit" resolves. Every
+    // download link is built from APP_DATA.releases.repo, so one wrong
+    // character here takes down every download on the site -- and the live site
+    // shipped exactly that, with a passing test suite, because the existing
+    // assertions only checked that the URL was well-formed and carried the
+    // right version.
+    //
+    // This is the offline half of the guard; `npm run sync-repo-url` is the
+    // networked/CI half and can also rewrite the literals.
+    const pkg = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, "..", "package.json"), "utf8"),
+    );
+    const expected = /github\.com[/:]([^/]+\/[^/.]+)/.exec(
+      pkg.repository.url,
+    )?.[1];
+    assert.ok(expected, "could not read the repo owner from package.json");
+
+    for (const file of ["data.js", "index.html", "dev.html"]) {
+      const body = fs.readFileSync(path.join(DOCS_DIR, file), "utf8");
+      // Any GitHub org/repo pair named in this file must be the same one.
+      const found = new Set(
+        [...body.matchAll(/github\.com\/([^/"\s]+\/[^/"\s.#]+)/g)].map(
+          (m) => m[1],
+        ),
+      );
+      for (const repo of found) {
+        assert.equal(
+          repo,
+          expected,
+          `docs/${file} links to ${repo}, but package.json says ${expected}. ` +
+            "GitHub does not redirect on owner-name case, so these downloads " +
+            "would 404.",
+        );
+      }
+    }
+  });
+
   test("the contributor page exists and is linked from the footer", () => {
     const devHtml = path.join(DOCS_DIR, "dev.html");
     assert.ok(fs.existsSync(devHtml), "docs/dev.html is missing");
@@ -585,12 +624,27 @@ describe("download links are built to survive a version bump", () => {
       );
     };
 
-    for (const version of ["1.0.0", "1.1.3"]) {
+    // Read the versions from the data rather than hardcoding them: a pinned
+    // "1.1.3" here went stale the moment the app reached 1.1.4 and failed this
+    // suite for a reason that had nothing to do with what it checks. Probe the
+    // oldest and newest listed, which is where drift would show.
+    const { current, oldest } = await page.evaluate(() => {
+      const chips = Array.from(
+        document.querySelectorAll<HTMLElement>(".version-chip"),
+      ).map((c) => c.dataset.version ?? "");
+      return {
+        current: chips[0],
+        oldest: chips[chips.length - 1],
+      };
+    });
+    assert.ok(current && oldest, "no version chips rendered");
+
+    for (const version of [oldest, current]) {
       const links = await check(version);
       assert.ok(links.length >= 4, "expected links for every platform");
       for (const { href, label } of links) {
-        // Both halves matter. A tag for 1.0.0 with a 1.1.3 file name in it
-        // 404s, and that is exactly the drift this catches.
+        // Both halves matter. A tag for one version with another version's
+        // file name in it 404s, and that is exactly the drift this catches.
         assert.ok(
           href.includes(`/releases/download/v${version}/`),
           `link does not point at tag v${version}: ${href}`,
