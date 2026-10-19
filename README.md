@@ -297,21 +297,28 @@ npm run package:linux    # Linux AppImage + .deb
 npm run package:dir      # unpacked app folder (fastest, for testing)
 ```
 
-Output lands in a per-platform directory under `release/` — `release/macos/`,
-`release/windows/` or `release/linux/` — rather than one flat directory.
-`scripts/package.mjs` passes `--config.directories.output` to electron-builder
-for this; the committed config in package.json still owns _what_ gets built.
-The separation matters because the release workflow uploads one platform's
-directory, and electron-builder writes shared filenames into it
-(`builder-effective-config.yaml`, `latest*.yml`, `builder-debug.yml`) that
-would otherwise be ambiguous across platforms and would silently travel with
-the wrong release.
+Output lands in `release/<platform>/<version>/` — for example
+`release/linux/1.2.3/` — rather than one flat directory. `scripts/package.mjs`
+passes `--config.directories.output` to electron-builder for this; the
+committed config in package.json still owns _what_ gets built, and the version
+comes from package.json so the directory cannot disagree with the build inside
+it.
+
+Scoping by platform _and_ by version matters for two reasons. electron-builder
+writes bookkeeping files under fixed names — `builder-effective-config.yaml`,
+`latest*.yml`, `builder-debug.yml` — regardless of what produced them, so a
+shared directory leaves each one ambiguous and prone to travelling with the
+wrong release. And because every version gets its own directory, rebuilding or
+re-testing an older version on the same machine cannot overwrite a newer
+build's artifacts.
 
 macOS builds are unsigned by default; for distribution outside your own machine
 you'll need a Developer ID certificate.
 
 The artifact names produced here are the exact names the website's download
 buttons link to, so the two must agree:
+
+Each directory holds the installers for one version of one platform:
 
 | Platform              | Artifact                                                         |
 | --------------------- | ---------------------------------------------------------------- |

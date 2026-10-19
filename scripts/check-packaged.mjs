@@ -28,44 +28,109 @@ const PASS = "correct-horse-battery";
 // scripts/package.mjs writes.
 const HOMES = { linux: "linux", macos: "macos", windows: "windows" };
 
-// Release output is scoped per platform by scripts/package.mjs, so each
-// platform's build lives in its own directory. The unpacked-app directory
-// inside it is still named by electron-builder after the target platform
-// (linux-unpacked / win-unpacked) and, on macOS, after the ARCHITECTURE:
-// `mac/` on Intel and `mac-arm64/` on Apple Silicon. Checking only one of the
-// two is how the packaged smoke test silently refused to run on the machine
-// most likely to produce a mac artifact.
-const packagedCandidates = (platform) => [
-  path.join(ROOT, "release", platform, "linux-unpacked", "shadow-bit"),
-  path.join(ROOT, "release", platform, "win-unpacked", "ShadowBit.exe"),
-  path.join(
-    ROOT,
-    "release",
-    platform,
-    "mac-arm64",
-    "ShadowBit.app",
-    "Contents",
-    "MacOS",
-    "ShadowBit",
-  ),
-  path.join(
-    ROOT,
-    "release",
-    platform,
-    "mac",
-    "ShadowBit.app",
-    "Contents",
-    "MacOS",
-    "ShadowBit",
-  ),
-];
+/** The version package.json declares — the build you most likely just made. */
+function currentVersion() {
+  return JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"))
+    .version;
+}
+
+/**
+ * Version directories to probe, newest first with the current version first.
+ *
+ * Sorting matters: release/ deliberately accumulates every version ever built
+ * on this machine, so probing in directory order could silently test a stale
+ * build and still report a pass. Comparing dotted versions with a plain string
+ * sort is the same trap one level down — "1.1.10" < "1.1.9" — so compare
+ * numerically per segment.
+ */
+function versionsToProbe() {
+  const versions = [];
+  for (const platform of Object.values(HOMES)) {
+    const dir = path.join(ROOT, "release", platform);
+    if (!fs.existsSync(dir)) continue;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) versions.push(entry.name);
+    }
+  }
+  const cmp = (a, b) => {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+      if (d) return d;
+    }
+    return 0;
+  };
+  return versions.sort((a, b) => {
+    // The current version first, so `npm run test:packaged` after
+    // `npm run package:dir` tests what you just built even if an older build
+    // happens to sort higher on some future scheme.
+    if (a === currentVersion()) return -1;
+    if (b === currentVersion()) return 1;
+    return cmp(b, a);
+  });
+}
+
+// Release output is scoped to release/<platform>/<version>/ by
+// scripts/package.mjs, so every built version is preserved side by side. The
+// unpacked-app directory inside a version directory is still named by
+// electron-builder after the target platform (linux-unpacked / win-unpacked)
+// and, on macOS, after the ARCHITECTURE: `mac/` on Intel and `mac-arm64/` on
+// Apple Silicon. Checking only one of the two is how the packaged smoke test
+// silently refused to run on the machine most likely to produce a mac artifact.
+//
+// Version directories are probed newest-first, so a stale build from an older
+// version is never silently picked over the one you just made. The current
+// version from package.json is preferred outright when present.
+const packagedCandidates = (platform) =>
+  versionsToProbe().flatMap((version) => [
+    path.join(
+      ROOT,
+      "release",
+      platform,
+      version,
+      "linux-unpacked",
+      "shadow-bit",
+    ),
+    path.join(
+      ROOT,
+      "release",
+      platform,
+      version,
+      "win-unpacked",
+      "ShadowBit.exe",
+    ),
+    path.join(
+      ROOT,
+      "release",
+      platform,
+      version,
+      "mac-arm64",
+      "ShadowBit.app",
+      "Contents",
+      "MacOS",
+      "ShadowBit",
+    ),
+    path.join(
+      ROOT,
+      "release",
+      platform,
+      version,
+      "mac",
+      "ShadowBit.app",
+      "Contents",
+      "MacOS",
+      "ShadowBit",
+    ),
+  ]);
 
 function findPackagedBinary() {
   // Probe in the host platform's own directory first: on a Linux machine the
   // macOS candidate can only ever be a stale leftover.
-  const home = { linux: "linux", darwin: "macos", win32: "windows" }[
-    process.platform
-  ];
+  const home =
+    HOMES[
+      { linux: "linux", darwin: "macos", win32: "windows" }[process.platform]
+    ];
   const order = [home, ...Object.values(HOMES).filter((p) => p !== home)];
   const candidates = order.flatMap(packagedCandidates);
   for (const c of candidates) if (fs.existsSync(c)) return c;

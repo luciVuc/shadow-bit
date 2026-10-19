@@ -14,17 +14,24 @@
 // source of truth for *what* is built and this script only decides *where* each
 // platform lands.
 //
+// Output is release/<platform>/<version>/, so a rebuild of an older version on
+// the same machine cannot overwrite a newer build's artifacts, and no two
+// platforms or versions share electron-builder's bookkeeping files
+// (builder-effective-config.yaml, latest*.yml, builder-debug.yml — all of which
+// are named the same regardless of what built them).
+//
 // Usage:
-//   node scripts/package.mjs linux          # release/linux
-//   node scripts/package.mjs mac            # release/macos
-//   node scripts/package.mjs win            # release/windows
-//   node scripts/package.mjs current        # release/<this platform>
+//   node scripts/package.mjs linux          # release/linux/1.2.3
+//   node scripts/package.mjs mac            # release/macos/1.2.3
+//   node scripts/package.mjs win            # release/windows/1.2.3
+//   node scripts/package.mjs current        # release/<this platform>/<version>
 //   node scripts/package.mjs linux --dir    # unpacked build, same directory
 //
 // Any extra arguments are forwarded to electron-builder verbatim.
 
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import * as fs from "node:fs";
 import * as path from "node:path";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -68,17 +75,37 @@ if (!dir) {
   process.exit(2);
 }
 
+/**
+ * The app version, read from package.json rather than taken as an argument.
+ *
+ * The output directory names the version, so a hand-passed one could disagree
+ * with the version actually being built and produce a directory that lies
+ * about its contents. package.json is also what `npm version` bumps, so this
+ * is the one value that cannot drift.
+ */
+function appVersion() {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
+  );
+  if (!/^\d+\.\d+\.\d+/.test(String(pkg.version))) {
+    throw new Error(
+      `package.json version "${pkg.version}" is not a full semver version`,
+    );
+  }
+  return pkg.version;
+}
+
 const flags = argv.slice(1);
-const outDir = path.join("release", dir);
+const outDir = path.join("release", dir, appVersion());
 
 // A user-supplied --config.directories.output would be silently overridden by
 // ours (last flag wins), which is exactly the kind of surprise that costs an
 // afternoon. Refuse instead of picking one.
 if (flags.some((f) => f.includes("directories.output"))) {
   console.error(
-    "This script sets the output directory per platform. Remove the " +
-      "--config.directories.output override and pass the platform as the " +
-      "first argument instead.",
+    "This script sets the output directory per platform and version. Remove " +
+      "the --config.directories.output override and pass the platform as " +
+      "the first argument instead.",
   );
   process.exit(2);
 }

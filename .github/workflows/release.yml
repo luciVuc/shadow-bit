@@ -76,11 +76,15 @@ jobs:
       matrix:
         include:
           # `dir` is the release/<platform>/ subdirectory that scripts/package.mjs
-          # scopes each build to. Uploading that ONE directory rather than all of
-          # release/ is deliberate: the runner image is clean, but the glob is
-          # the only thing standing between a future cross-target build and an
-          # artifact from another platform landing in this release. The paths
-          # are relative to the workspace root because upload-artifact globs
+          # scopes each build to. The version segment is added at upload time
+          # from the built package.json (see the `version` step), because it has
+          # to be the version the artifacts actually carry -- a hardcoded string
+          # here would go stale the moment a release is cut from a different
+          # commit. Uploading that ONE version directory rather than all of
+          # release/ is deliberate: the runner image is clean, but the glob is the
+          # only thing standing between a future cross-target build and an
+          # artifact from another platform or version landing in this release.
+          # Paths are relative to the workspace root because upload-artifact globs
           # from there, not from the `path` directory.
           - os: macos-latest
             target: mac
@@ -103,6 +107,14 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Read version
+        id: version
+        # The single source of truth for the version, read from the same
+        # package.json electron-builder will read. Sourced rather than echoed so
+        # a drifted tag (v2.0.0 pushed from a 1.9.9 package.json) surfaces here
+        # instead of publishing a release whose directory lies about its
+        # contents.
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Build
         run: npm run build
       - name: Package
@@ -144,7 +156,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
-          path: ${{ matrix.dir }}/
+          path: ${{ matrix.dir }}/${{ steps.version.outputs.v }}/
           retention-days: 7
 
   publish:
