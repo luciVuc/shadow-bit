@@ -830,7 +830,7 @@ window.APP_DATA = {
     packaging: [
       {
         title: "Produce installers",
-        code: "npm run package:mac     # .dmg + .zip  (macOS host only)\nnpm run package:win     # .exe          (needs wine on Linux)\nnpm run package:linux   # .AppImage + .deb\n\n# output lands in release/",
+        code: "npm run package:mac     # .dmg + .zip  (macOS host only)\nnpm run package:win     # .exe          (needs wine on Linux)\nnpm run package:linux   # .AppImage + .deb\n\n# output lands in release/<platform>/, so a mac build\n# never mixes its files with a Linux one",
       },
       {
         title: "Smoke-test a packaged build",

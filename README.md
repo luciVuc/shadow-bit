@@ -297,8 +297,18 @@ npm run package:linux    # Linux AppImage + .deb
 npm run package:dir      # unpacked app folder (fastest, for testing)
 ```
 
-Output goes to `release/`. macOS builds are unsigned by default; for
-distribution outside your own machine you'll need a Developer ID certificate.
+Output lands in a per-platform directory under `release/` — `release/macos/`,
+`release/windows/` or `release/linux/` — rather than one flat directory.
+`scripts/package.mjs` passes `--config.directories.output` to electron-builder
+for this; the committed config in package.json still owns _what_ gets built.
+The separation matters because the release workflow uploads one platform's
+directory, and electron-builder writes shared filenames into it
+(`builder-effective-config.yaml`, `latest*.yml`, `builder-debug.yml`) that
+would otherwise be ambiguous across platforms and would silently travel with
+the wrong release.
+
+macOS builds are unsigned by default; for distribution outside your own machine
+you'll need a Developer ID certificate.
 
 The artifact names produced here are the exact names the website's download
 buttons link to, so the two must agree:

@@ -71,7 +71,26 @@ relative to its own `__dirname`, so if that (or the bundled renderer assets,
 or the preload) fell outside the `files` globs in package.json, every vault
 operation would fail in a shipped build and nowhere else. It also asserts the
 DevTools menu item is absent and the tightened CSP shipped. Run it before a
-release, and note that it is platform-specific: it looks for `release/linux-unpacked`, `release/mac-arm64`, `release/mac` (electron-builder names the mac directory after the architecture) and `release/win-unpacked`, in that order.
+release, and note that it is platform-specific.
+
+**Packaging output is scoped per platform.** `scripts/package.mjs` passes
+`--config.directories.output` to electron-builder, so a build lands in
+`release/macos/`, `release/windows/` or `release/linux/` instead of one flat
+`release/`. All five `package*` scripts go through it — including
+`package:dir`. Do not invoke `electron-builder` directly from a script: that is
+how the flat layout comes back, and electron-builder writes
+`builder-effective-config.yaml`, `latest*.yml` and `builder-debug.yml` into its
+output directory, so two platforms sharing one directory leaves every one of
+those ambiguous about which build produced it. The release workflow uploads a
+single platform directory (`matrix.dir`) for the same reason.
+
+`check-packaged.mjs` probes `release/<platform>/` for the host platform first,
+then the others. Inside one, electron-builder still names the unpacked app after
+the target: `release/linux/linux-unpacked/shadow-bit`,
+`release/windows/win-unpacked/ShadowBit.exe`, and on macOS
+`release/macos/mac-arm64/...` on Apple Silicon or `release/macos/mac/...` on
+Intel. Check both mac paths — that is why the packaged test once refused to run
+on the machine most likely to have produced a mac artifact.
 
 The three NFR suites run against the **real renderer DOM/CSS/JS** in headless
 Chromium, not Electron. Two reasons: the page's strict CSP (`script-src 'self'`)

@@ -75,15 +75,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # `dir` is the release/<platform>/ subdirectory that scripts/package.mjs
+          # scopes each build to. Uploading that ONE directory rather than all of
+          # release/ is deliberate: the runner image is clean, but the glob is
+          # the only thing standing between a future cross-target build and an
+          # artifact from another platform landing in this release. The paths
+          # are relative to the workspace root because upload-artifact globs
+          # from there, not from the `path` directory.
           - os: macos-latest
             target: mac
-            artifact: "release/**/*.{dmg,zip}"
+            dir: release/macos
+            artifact: "release/macos/**/*.{dmg,zip}"
           - os: windows-latest
             target: win
-            artifact: "release/**/*.exe"
+            dir: release/windows
+            artifact: "release/windows/**/*.exe"
           - os: ubuntu-latest
             target: linux
-            artifact: "release/**/*.{AppImage,deb}"
+            dir: release/linux
+            artifact: "release/linux/**/*.{AppImage,deb}"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +106,11 @@ jobs:
       - name: Build
         run: npm run build
       - name: Package
-        run: npx electron-builder --${{ matrix.target }} --publish never
+        # The wrapper scopes the output to release/<platform>/ and forwards the
+        # target flag. `--publish never` still holds: publishing happens once,
+        # in the separate `publish` job, so two runners cannot race to create
+        # the same release.
+        run: node scripts/package.mjs ${{ matrix.target }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Code signing. These are what turn a Gatekeeper-blocked download into
@@ -130,7 +144,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
-          path: release/
+          path: ${{ matrix.dir }}/
           retention-days: 7
 
   publish:

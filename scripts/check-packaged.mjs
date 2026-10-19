@@ -24,33 +24,50 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PASS = "correct-horse-battery";
 
+// The three release subdirectories, keyed by the same names
+// scripts/package.mjs writes.
+const HOMES = { linux: "linux", macos: "macos", windows: "windows" };
+
+// Release output is scoped per platform by scripts/package.mjs, so each
+// platform's build lives in its own directory. The unpacked-app directory
+// inside it is still named by electron-builder after the target platform
+// (linux-unpacked / win-unpacked) and, on macOS, after the ARCHITECTURE:
+// `mac/` on Intel and `mac-arm64/` on Apple Silicon. Checking only one of the
+// two is how the packaged smoke test silently refused to run on the machine
+// most likely to produce a mac artifact.
+const packagedCandidates = (platform) => [
+  path.join(ROOT, "release", platform, "linux-unpacked", "shadow-bit"),
+  path.join(ROOT, "release", platform, "win-unpacked", "ShadowBit.exe"),
+  path.join(
+    ROOT,
+    "release",
+    platform,
+    "mac-arm64",
+    "ShadowBit.app",
+    "Contents",
+    "MacOS",
+    "ShadowBit",
+  ),
+  path.join(
+    ROOT,
+    "release",
+    platform,
+    "mac",
+    "ShadowBit.app",
+    "Contents",
+    "MacOS",
+    "ShadowBit",
+  ),
+];
+
 function findPackagedBinary() {
-  const candidates = [
-    path.join(ROOT, "release", "linux-unpacked", "shadow-bit"),
-    // electron-builder names the mac output directory after the arch, so an
-    // Apple Silicon build lands in mac-arm64/ and an Intel one in mac/. Checking
-    // only release/mac meant the packaged smoke test silently refused to run on
-    // the machine most likely to produce a mac artifact.
-    path.join(
-      ROOT,
-      "release",
-      "mac-arm64",
-      "ShadowBit.app",
-      "Contents",
-      "MacOS",
-      "ShadowBit",
-    ),
-    path.join(
-      ROOT,
-      "release",
-      "mac",
-      "ShadowBit.app",
-      "Contents",
-      "MacOS",
-      "ShadowBit",
-    ),
-    path.join(ROOT, "release", "win-unpacked", "ShadowBit.exe"),
+  // Probe in the host platform's own directory first: on a Linux machine the
+  // macOS candidate can only ever be a stale leftover.
+  const home = { linux: "linux", darwin: "macos", win32: "windows" }[
+    process.platform
   ];
+  const order = [home, ...Object.values(HOMES).filter((p) => p !== home)];
+  const candidates = order.flatMap(packagedCandidates);
   for (const c of candidates) if (fs.existsSync(c)) return c;
   throw new Error(
     "No packaged build found. Run `npm run package:dir` (or package:mac / " +
