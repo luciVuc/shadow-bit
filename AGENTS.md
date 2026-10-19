@@ -73,24 +73,62 @@ operation would fail in a shipped build and nowhere else. It also asserts the
 DevTools menu item is absent and the tightened CSP shipped. Run it before a
 release, and note that it is platform-specific.
 
-**Packaging output is scoped per platform.** `scripts/package.mjs` passes
-`--config.directories.output` to electron-builder, so a build lands in
-`release/macos/`, `release/windows/` or `release/linux/` instead of one flat
-`release/`. All five `package*` scripts go through it — including
-`package:dir`. Do not invoke `electron-builder` directly from a script: that is
-how the flat layout comes back, and electron-builder writes
-`builder-effective-config.yaml`, `latest*.yml` and `builder-debug.yml` into its
-output directory, so two platforms sharing one directory leaves every one of
-those ambiguous about which build produced it. The release workflow uploads a
-single platform directory (`matrix.dir`) for the same reason.
+**Packaging output is scoped by platform AND version.**
+`scripts/package.mjs` passes `--config.directories.output` to electron-builder,
+so a build lands in `release/<platform>/<version>/` — `release/linux/1.2.3/`,
+`release/macos/1.2.3/` — instead of one flat `release/`. All five `package*`
+scripts go through it, including `package:dir`. Do not invoke
+`electron-builder` directly from a script: that is how the flat layout comes
+back, and electron-builder writes `builder-effective-config.yaml`, `latest*.yml`
+and `builder-debug.yml` into its output directory, so two platforms or two
+versions sharing one directory leaves every one of those ambiguous about which
+build produced it. The release workflow uploads a single `<platform>/<version>`
+directory (`matrix.dir` plus a `version` step that reads package.json) for the
+same reason.
 
-`check-packaged.mjs` probes `release/<platform>/` for the host platform first,
-then the others. Inside one, electron-builder still names the unpacked app after
-the target: `release/linux/linux-unpacked/shadow-bit`,
-`release/windows/win-unpacked/ShadowBit.exe`, and on macOS
-`release/macos/mac-arm64/...` on Apple Silicon or `release/macos/mac/...` on
-Intel. Check both mac paths — that is why the packaged test once refused to run
-on the machine most likely to have produced a mac artifact.
+The version is read from `package.json`, never passed as an argument: the
+directory names the version, so a hand-passed one could disagree with the
+version actually built and produce a directory that lies about its contents.
+`package.json` is also what `npm version` bumps, so it is the one value that
+cannot drift.
+
+**Where artifacts live, and where they must not.** `release/` is gitignored and
+local-only; the durable copy of every published build is the asset attached to
+its GitHub Release by the `publish` job, and the site's download links point at
+those assets (`/releases/download/v<version>/<file>`). Nothing is served from
+`docs/`. Do not "solve" local accumulation by committing artifacts: git is a
+source store, not an artifact store — the Linux AppImage is ~119 MiB against
+GitHub's 100 MiB hard limit for a file in a repository, so the push is
+rejected outright, and every version ever committed would be cloned forever.
+
+`npm run clean:release -- --keep <n>` prunes old version directories
+(`scripts/clean-release.mjs`). `--keep` is required and there is no default:
+deleting build output on a guessed retention policy is how the build you wanted
+is the one that disappears. It removes only
+`release/<known-platform>/<semver>/` and reports anything else it finds rather
+than touching it.
+
+**The release workflow publishes instead of leaving a draft.** A draft release
+means every download link on the site 404s until a human clicks publish, and
+those links are the product's front door. The gate is the test jobs
+(`build-test` and `gui-smoke` both feed `package`, which feeds `publish`). If a
+human approval step is wanted, use required reviewers in the repository's
+Actions settings rather than reverting to a draft.
+
+`check-packaged.mjs` probes `release/<platform>/<version>/` for the host
+platform first, then the others, newest version first. Inside one,
+electron-builder still names the unpacked app after the target:
+`release/linux/1.2.3/linux-unpacked/shadow-bit`,
+`release/windows/1.2.3/win-unpacked/ShadowBit.exe`, and on macOS
+`.../mac-arm64/...` on Apple Silicon or `.../mac/...` on Intel. Check both mac
+paths — that is why the packaged test once refused to run on the machine most
+likely to have produced a mac artifact.
+
+**Version order must be compared numerically, per segment.** `release/`
+deliberately accumulates every version ever built on the machine, so probing in
+directory order could test a stale build and still report a pass. Comparing
+dotted versions with a plain string sort repeats the same bug one level down:
+`"1.1.10" < "1.1.9"`.
 
 The three NFR suites run against the **real renderer DOM/CSS/JS** in headless
 Chromium, not Electron. Two reasons: the page's strict CSP (`script-src 'self'`)

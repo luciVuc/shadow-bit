@@ -96,7 +96,7 @@ echo 'export PATH="$PATH:'"$(pwd)"'"' >> ~/.zshrc && source ~/.zshrc
 3. Build the installer:
    ```powershell
    npm run package:win
-   # → release\windows\1.1.3\ShadowBit Setup 1.1.3.exe
+   # → release\windows\1.1.3\ShadowBit Setup 1.1.4.exe
    ```
 4. Run the installer — it places the app in Program Files with a Start Menu shortcut.
 
@@ -122,8 +122,8 @@ npm install && npm run build
 
 # Build AppImage
 npm run package:linux
-chmod +x "release/linux/1.1.3/ShadowBit-1.1.3.AppImage"
-./release/linux/1.1.3/"ShadowBit-1.1.3.AppImage"
+chmod +x "release/linux/1.1.3/ShadowBit-1.1.4.AppImage"
+./release/linux/1.1.3/"ShadowBit-1.1.4.AppImage"
 ```
 
 **CLI on Linux:**

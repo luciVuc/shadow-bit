@@ -6,7 +6,7 @@ on:
       - "v*"
 
 # Only one release build at a time. Without this, two pushes close together
-# race to upload artifacts into the same draft release.
+# race to upload artifacts into the same release.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -171,11 +171,30 @@ jobs:
         with:
           path: release-artifacts/
           merge-multiple: true
+
+      # The Release is what makes the artifacts durable AND what the website's
+      # download buttons point at: docs/data.js builds every href as
+      # /releases/download/v<version>/<artifact> against the GitHub Release for
+      # that tag. There is no copy served from docs/. So a draft release means
+      # every download link on the site is a 404 until someone clicks publish —
+      # the one manual step that can silently break the product's front door.
+      #
+      # Publishing is gated on the checks instead: this job `needs: package`,
+      # which needs both the Linux test job and the macOS GUI/NFR job, so the
+      # tests are the gate, not a human. If you want a human approval step
+      # before publishing, do it by making the release require manual approval
+      # in the repository's Actions settings rather than by reverting to a
+      # draft here — the draft's cost is broken download links, which is a
+      # worse failure than an unwanted release.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: release-artifacts/**/*
           generate_release_notes: true
-          draft: true
+          # Fail loudly rather than publishing a release whose tag does not
+          # match the version the artifacts were built from. Without this, a
+          # tag pushed from the wrong commit produces a release directory that
+          # lies about its contents, and the site's links 404 against it.
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

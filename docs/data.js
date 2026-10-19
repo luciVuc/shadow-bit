@@ -5,7 +5,7 @@ window.APP_DATA = {
     title: "ShadowBit",
     tagline: "One encrypted file. One password. No accounts, no cloud.",
     subTagline: "Lock a folder into a single .svlt file and send it anywhere.",
-    version: "1.1.3",
+    version: "1.1.4",
     github: "https://github.com/lucianvuc/shadow-bit",
     license: "MIT",
   },
@@ -176,7 +176,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "macOS — Apple Silicon",
-          file: "ShadowBit-1.1.3-arm64.dmg",
+          file: "ShadowBit-1.1.4-arm64.dmg",
           format: ".dmg",
           size: "~99 MB",
           primary: true,
@@ -184,7 +184,7 @@ window.APP_DATA = {
         },
         {
           label: "macOS — Intel",
-          file: "ShadowBit-1.1.3-x64.dmg",
+          file: "ShadowBit-1.1.4-x64.dmg",
           format: ".dmg",
           size: "~100 MB",
           arch: "Intel",
@@ -214,7 +214,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Windows 10 / 11",
-          file: "ShadowBit Setup 1.1.3.exe",
+          file: "ShadowBit Setup 1.1.4.exe",
           format: ".exe installer",
           size: "~98 MB",
           primary: true,
@@ -245,7 +245,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Linux — AppImage",
-          file: "ShadowBit-1.1.3.AppImage",
+          file: "ShadowBit-1.1.4.AppImage",
           format: ".AppImage",
           size: "~120 MB",
           primary: true,
@@ -253,7 +253,7 @@ window.APP_DATA = {
         },
         {
           label: "Linux — Debian / Ubuntu package",
-          file: "shadow-bit_1.1.3_amd64.deb",
+          file: "shadow-bit_1.1.4_amd64.deb",
           format: ".deb",
           size: "~95 MB",
           arch: "64-bit, Debian family",
@@ -831,6 +831,10 @@ window.APP_DATA = {
       {
         title: "Produce installers",
         code: "npm run package:mac     # .dmg + .zip  (macOS host only)\nnpm run package:win     # .exe          (needs wine on Linux)\nnpm run package:linux   # .AppImage + .deb\n\n# output lands in release/<platform>/<version>/, so builds of\n# different platforms or versions never overwrite each other",
+      },
+      {
+        title: "Prune old builds",
+        code: "npm run clean:release -- --dry-run\nnpm run clean:release -- --keep 2 -y\n\n# release/ keeps every version it ever built; this trims\n# the old ones. Published builds are safe — they live on\n# their GitHub Release, which is what the website links to.",
       },
       {
         title: "Smoke-test a packaged build",

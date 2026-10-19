@@ -360,6 +360,28 @@ This split is enforced by hand, not by tooling: keep it that way when adding a
 section. The one exception is the CLI, which is a user-facing interface and is
 documented on the main page.
 
+### Cleaning up old builds
+
+`release/` accumulates every version built on the machine. That is deliberate —
+no build overwrites another — but it needs pruning eventually:
+
+```bash
+npm run clean:release -- --dry-run         # show the plan, delete nothing
+npm run clean:release -- --keep 2 -y       # keep the 2 newest per platform
+npm run clean:release -- --keep 1 --platform linux
+```
+
+`--keep` is required; there is no default and no accidental wipe mode. Anything
+in a platform directory that isn't a version directory is reported and left
+alone. Without `--yes` it prompts, and on a non-interactive terminal it refuses
+rather than guessing.
+
+Deleting local output is safe because it is only a copy: every published build
+is attached to its GitHub Release by CI, and that is where the website's
+download links point. Artifacts are deliberately _not_ committed to the repo
+instead — git is a source store, and the Linux AppImage alone exceeds GitHub's
+100 MiB per-file limit for a repository.
+
 ### The download section
 
 `docs/data.js` declares `releases` (the published version list, newest first)
