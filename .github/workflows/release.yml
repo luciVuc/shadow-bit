@@ -16,6 +16,13 @@ permissions:
   contents: read
 
 jobs:
+  # NOTE: every `run:` step in this workflow sets `shell: bash` explicitly,
+  # including the ones that look Windows-neutral. The matrix has a
+  # windows-latest leg, where GitHub's default shell is PowerShell — and
+  # PowerShell does not have `sed`, nor bash's `${!v}` indirection. Two steps
+  # have already failed on exactly this: one died at a bare "exit code 1" and
+  # one silently produced an EMPTY glob, which surfaced three steps later as
+  # "Input required and not supplied: path". Neither error named the cause.
   build-test:
     name: Build & test before release
     runs-on: ubuntu-latest
@@ -196,6 +203,12 @@ jobs:
       # visible.
       - name: Resolve artifact glob
         id: glob
+        # bash for the same reason as the signing step: this leg runs on
+        # windows-latest, where the default shell is PowerShell and `sed` is
+        # not on PATH. PowerShell silently produced an EMPTY path, so
+        # upload-artifact failed with "Input required and not supplied: path" —
+        # no glob, no upload, and a bare error that names nothing.
+        shell: bash
         run: echo "path=${{ matrix.artifact }}" | sed "s/{v}/${{ steps.version.outputs.v }}/" >> "$GITHUB_OUTPUT"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
