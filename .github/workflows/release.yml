@@ -117,34 +117,29 @@ jobs:
         run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Build
         run: npm run build
-      - name: Package
-        # The wrapper scopes the output to release/<platform>/ and forwards the
-        # target flag. `--publish never` still holds: publishing happens once,
-        # in the separate `publish` job, so two runners cannot race to create
-        # the same release.
-        run: node scripts/package.mjs ${{ matrix.target }} --publish never
+      # Export the signing variables ONLY when the corresponding secret exists.
+      #
+      # An `env:` block cannot express that: `secrets.X` for an unset secret is
+      # the empty string, which still DEFINES the variable. electron-builder
+      # then sees CSC_KEY_PASSWORD as present, attempts signing with an empty
+      # password, and the macOS job dies at a bare
+      #   /Users/runner/... not a file
+      # Leaving the variables undefined is what makes electron-builder skip
+      # signing and build an unsigned .dmg / .exe. Those publish fine; they
+      # just trip Gatekeeper / SmartScreen on first launch, which the download
+      # page already warns the visitor about.
+      #
+      # To produce SIGNED artifacts, set these repository secrets:
+      #   MAC_CERT_P12 / MAC_CERT_PASSWORD   Developer ID "Application" (.p12)
+      #   APPLE_ID / APPLE_APP_PASSWORD / APPLE_TEAM_ID   notarization
+      #   WIN_CERT_PFX / WIN_CERT_PASSWORD   Windows code signing (.pfx)
+      # electron-builder notarizes automatically once APPLE_ID and APPLE_TEAM_ID
+      # are present, and `mac.hardenedRuntime` plus
+      # resources/entitlements.mac.plist are already configured for it. (The
+      # entitlements live in resources/, not build/ - build/ is gitignored as
+      # generated output, so a plist there would never be committed.)
+      - name: Configure code signing
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Code signing. These are what turn a Gatekeeper-blocked download into
-          # an installable app; without them the macOS artifact is unsigned and
-          # macOS refuses to open it ("app is damaged"), which for a security
-          # product is indistinguishable from malware.
-          #
-          # Set these repository secrets before the first tagged release:
-          #   CSC_LINK               base64 of the Developer ID "Application" .p12
-          #   CSC_KEY_PASSWORD       password for that .p12
-          #   APPLE_ID               Apple ID used for notarization
-          #   APPLE_APP_SPECIFIC_PASSWORD  app-specific password for that Apple ID
-          #   APPLE_TEAM_ID          Developer Team ID
-          #   WIN_CSC_LINK           base64 of the code-signing .pfx
-          #   WIN_CSC_KEY_PASSWORD   password for that .pfx
-          #
-          # electron-builder notarizes automatically once APPLE_ID and
-          # APPLE_TEAM_ID are present, and `mac.hardenedRuntime` plus
-          # resources/entitlements.mac.plist are already configured for it.
-          # (The entitlements live in resources/, not build/ — build/ is
-          # gitignored as generated output, so a plist there would never be
-          # committed and the signed build would fail to find it.)
           CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -152,6 +147,29 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           WIN_CSC_LINK: ${{ secrets.WIN_CERT_PFX }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+        run: |
+          signed=0
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID \
+                   APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID \
+                   WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; do
+            if [ -n "${!v:-}" ]; then
+              echo "$v=${!v}" >> "$GITHUB_ENV"
+              signed=1
+            fi
+          done
+          if [ "$signed" = "1" ]; then
+            echo "Code signing: configured" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Code signing: none - artifacts will be **unsigned**" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Package
+        # The wrapper scopes the output to release/<platform>/<version>/ and
+        # forwards the target flag. `--publish never` still holds: publishing
+        # happens once, in the separate `publish` job, so three runners cannot
+        # race to create the same release.
+        run: node scripts/package.mjs ${{ matrix.target }} --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
