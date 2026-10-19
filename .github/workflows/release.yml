@@ -110,15 +110,18 @@ jobs:
           # "Pattern does not match any files".
           - os: macos-latest
             target: mac
+            arch: --arm64 --x64
             artifact: |
               release/macos/{v}/*.dmg
               release/macos/{v}/*.zip
           - os: windows-latest
             target: win
+            arch: --x64
             artifact: |
               release/windows/{v}/*.exe
           - os: ubuntu-latest
             target: linux
+            arch: --x64
             artifact: |
               release/linux/{v}/*.AppImage
               release/linux/{v}/*.deb
@@ -192,12 +195,18 @@ jobs:
           else
             echo "Code signing: none - artifacts will be **unsigned**" >> "$GITHUB_STEP_SUMMARY"
           fi
+      # macOS builds BOTH architectures. macos-latest is Apple Silicon, so a
+      # bare `--mac` produces only the arm64 .dmg — and the download page lists
+      # an Intel build too, which 404s for anyone on an Intel Mac. Naming both
+      # explicitly yields ShadowBit-<version>-arm64.dmg and
+      # ShadowBit-<version>-x64.dmg, which is exactly what the page links to.
+      #
+      # The wrapper scopes the output to release/<platform>/<version>/ and
+      # forwards the target flag. `--publish never` still holds: publishing
+      # happens once, in the separate `publish` job, so three runners cannot
+      # race to create the same release.
       - name: Package
-        # The wrapper scopes the output to release/<platform>/<version>/ and
-        # forwards the target flag. `--publish never` still holds: publishing
-        # happens once, in the separate `publish` job, so three runners cannot
-        # race to create the same release.
-        run: node scripts/package.mjs ${{ matrix.target }} --publish never
+        run: node scripts/package.mjs ${{ matrix.target }} ${{ matrix.arch }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Upload ONLY the installers, never the unpacked app tree.

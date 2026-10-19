@@ -224,7 +224,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Windows 10 / 11",
-          file: "ShadowBit Setup 1.1.5.exe",
+          file: "ShadowBit.Setup.1.1.5.exe",
           format: ".exe installer",
           size: "~98 MB",
           primary: true,

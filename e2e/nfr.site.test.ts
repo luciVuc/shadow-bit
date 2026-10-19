@@ -707,6 +707,59 @@ describe("download links are built to survive a version bump", () => {
     }
   });
 
+  test(
+    "every advertised artifact exists on the published release",
+    { skip: "network: hits the GitHub API" },
+    async () => {
+      // The check that would have caught the real 404s.
+      //
+      // Everything else in this file verifies the download links are WELL FORMED:
+      // right shape, right version, right repo. Neither of those says anything
+      // about whether the file is there. Two links were well-formed and 404'd —
+      // the Windows installer (electron-builder v26 emits
+      // "ShadowBit.Setup.1.1.5.exe", the page said "ShadowBit Setup 1.1.5.exe")
+      // and the Intel .dmg (CI built arm64 only).
+      //
+      // Skipped by default because it needs the network. The offline CI
+      // equivalent is `npm run check-releases`, which verifies the versions;
+      // this verifies the file names inside a version.
+      const { releases } = readAppData();
+      const pkg = JSON.parse(
+        fs.readFileSync(path.resolve(__dirname, "..", "package.json"), "utf8"),
+      );
+      const repo = /github\.com[/:]([^/]+\/[^/.]+)/.exec(
+        pkg.repository.url,
+      )![1];
+      const version = readAppData().meta.version;
+      const missing: string[] = [];
+
+      const res = await fetch(
+        `https://api.github.com/repos/${repo}/releases/tags/v${version}`,
+        { headers: { accept: "application/vnd.github+json" } },
+      );
+      if (!res.ok) throw new Error(`no published release for v${version}`);
+      const release = (await res.json()) as {
+        assets: { name: string }[];
+      };
+      const names = new Set(release.assets.map((a) => a.name));
+
+      for (const platform of readAppData().platforms) {
+        for (const build of platform.builds) {
+          if (!names.has(build.file)) {
+            missing.push(`${platform.label}: ${build.file}`);
+          }
+        }
+      }
+      void releases;
+      assert.deepEqual(
+        missing,
+        [],
+        `these downloads 404: ${missing.join(", ")}. ` +
+          `Published assets are: ${[...names].join(", ")}`,
+      );
+    },
+  );
+
   test("the version list leads with the current app version", () => {
     const data = readAppData();
     const versions = data.releases.versions;

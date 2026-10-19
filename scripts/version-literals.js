@@ -67,8 +67,14 @@ const LITERAL_SITES = [
   },
   {
     file: "docs/data.js",
+    // electron-builder v26 names the NSIS artifact with DOTS
+    // ("ShadowBit.Setup.1.1.5.exe"). Anchoring on the old spaced form
+    // ("ShadowBit Setup 1.1.5.exe") would silently match nothing, and a
+    // silently-unmatched site is how the download 404'd while the suite
+    // stayed green. Anchoring on the exact current form means a rename in
+    // electron-builder surfaces here instead of on the website.
     label: "download: Windows NSIS installer name",
-    before: "ShadowBit Setup ",
+    before: "ShadowBit.Setup.",
     after: ".exe",
   },
   {
