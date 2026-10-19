@@ -231,7 +231,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: release-artifacts/
+          path: release/
           merge-multiple: true
 
       # The Release is what makes the artifacts durable AND what the website's
@@ -251,7 +251,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-artifacts/**/*
+          files: release/**/*
           generate_release_notes: true
           # Fail loudly rather than publishing a release whose tag does not
           # match the version the artifacts were built from. Without this, a
