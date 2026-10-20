@@ -152,9 +152,12 @@ jobs:
       # then sees CSC_KEY_PASSWORD as present, attempts signing with an empty
       # password, and the macOS job dies at a bare
       #   /Users/runner/... not a file
-      # Leaving the variables undefined is what makes electron-builder skip
-      # signing and build an unsigned .dmg / .exe. Those publish fine; they
-      # just trip Gatekeeper / SmartScreen on first launch, which the download
+      # Leaving the variables undefined means no signing identity is
+      # available, so electron-builder ad-hoc signs the mac build (package.json
+      # sets `mac.identity` to "-"). An ad-hoc signature is the minimum Apple
+      # Silicon requires to launch at all: without it Gatekeeper rejects the app
+      # as "damaged" with no bypass. The .dmg still trips the one-time
+      # "developer cannot be verified" prompt on first launch, which the download
       # page already warns the visitor about.
       #
       # To produce SIGNED artifacts, set these repository secrets:
