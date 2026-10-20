@@ -236,7 +236,7 @@ call to action, and it looks like it worked until the user clicks it.
 3. **For any download change**, click through: switch platform tabs, pick an
    older version, and confirm the hrefs carry that version in both the tag and
    the artifact name.
-4. Check: renders correctly, no console errors (favicon 404 is benign), responsive at 375/768/1280px.
+4. Check: renders correctly, no console errors, responsive at 375/768/1280px.
 5. Test interactions: version chips, platform tab switching, GUI tab switching, CLI search filter, Q&A search filter, Q&A category chips, Q&A accordion, copy buttons, mobile menu, scroll spy.
 6. Check the Q&A has no horizontal overflow at 375px, and that the copy button in
    a code block sits top-right without covering the first line.
