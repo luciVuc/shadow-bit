@@ -1,5 +1,45 @@
 // data.js — Static content for the ShadowBit documentation website.
 // All user-visible text lives here. index.js renders it into the page.
+// Gatekeeper bypass walkthrough, shared by the macOS install panel and the
+// Troubleshooting Q&A. Screenshots live in assets/ next to this file; the
+// site must stay self-contained (npm run test:site enforces no CDN/remote),
+// so keep the paths relative.
+const GATEKEEPER_GUIDE = {
+  title: "Getting past the Gatekeeper warning",
+  intro:
+    "ShadowBit is distributed without Apple notarization, so macOS refuses to open it the first time. Nothing is wrong with the file — macOS just cannot check a signature it was never given. The dialog on the first launch offers no way through; the bypass lives in System Settings, and once you approve it there the warning never appears again. The screenshots below follow one first launch start to finish.",
+  steps: [
+    {
+      title: "Install the app",
+      desc: "Open the downloaded .dmg and drag ShadowBit into Applications.",
+      img: "assets/1.png",
+      alt: "Finder window titled ShadowBit 1.1.5-arm64 showing the ShadowBit app icon and an arrow pointing to the Applications folder.",
+    },
+    {
+      title: "Launch it — macOS blocks the first attempt",
+      desc: 'Double-click ShadowBit. Gatekeeper stops it and says "Apple could not verify \u201cShadowBit.app\u201d is free of malware…", offering only Move to Trash and Done. Click Done — do not move the app to the Trash.',
+      img: "assets/2.png",
+      alt: "macOS dialog: \u201cShadowBit.app\u201d Not Opened — Apple could not verify \u201cShadowBit.app\u201d is free of malware, with Move to Trash and Done buttons.",
+    },
+    {
+      title: "Allow it in System Settings",
+      desc: "Open System Settings → Privacy & Security and scroll to the Security section. Where apps are allowed from, you will find \u201c\u201cShadowBit.app\u201d was blocked to protect your Mac.\u201d Click Open Anyway.",
+      img: "assets/3.png",
+      alt: "System Settings, Privacy & Security pane, showing ShadowBit.app was blocked to protect your Mac next to an Open Anyway button.",
+    },
+    {
+      title: "Confirm you want to open it",
+      desc: 'macOS asks "Open \u201cShadowBit.app\u201d?" with another warning that it cannot be verified. Click Open Anyway (the lower, grey button) — not Move to Trash.',
+      img: "assets/4.png",
+      alt: "macOS dialog: Open \u201cShadowBit.app\u201d? with Move to Trash, Open Anyway and Done buttons.",
+    },
+    {
+      title: "Launch it again",
+      desc: "The app now opens normally, and the Gatekeeper restriction stays off for this build — no future launch repeats this.",
+    },
+  ],
+};
+
 window.APP_DATA = {
   meta: {
     title: "ShadowBit",
@@ -214,7 +254,10 @@ window.APP_DATA = {
           desc: "Open it from Applications. Double-clicking a .svlt vault file now opens it in ShadowBit.",
         },
       ],
-      note: "First launch: right-click the app in Applications → Open → Confirm. That bypasses the Gatekeeper warning the first time only.",
+      note: {
+        text: "First launch: macOS Gatekeeper blocks the app and the launch dialog has no bypass — the approval lives in System Settings → Privacy & Security → Open Anyway. See the walkthrough below.",
+        guide: GATEKEEPER_GUIDE,
+      },
     },
     {
       id: "windows",
@@ -792,6 +835,13 @@ window.APP_DATA = {
             "Either the file is not a ShadowBit vault, or it was written by an older build of ShadowBit. Those older files carry a different magic and are rejected as corrupt — there is no compatibility path, and none is planned. Recover such a vault with the version of ShadowBit that created it, then re-save it.",
             "A vault written by any current build starts with the current magic, and every container of format version 1 to 3 parses and opens. (The container format version and the app version are unrelated numbers — see the CLI reference.)",
           ],
+        },
+        {
+          q: "macOS says ShadowBit could not be verified and blocks the app. How do I get past Gatekeeper?",
+          a: [
+            "This is Gatekeeper reacting to a build that carries no Apple notarization, not a defect in the file. On the first launch the dialog offers no way through — approving the app happens in System Settings instead, and once granted, the warning never comes back. The full walkthrough, step by step with screenshots, is below; keep following it in order.",
+          ],
+          guide: GATEKEEPER_GUIDE,
         },
         {
           q: "Can I open a vault on a machine where I only have the file?",

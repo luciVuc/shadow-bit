@@ -24,6 +24,53 @@ function copyCode(btn, text) {
   });
 }
 
+/**
+ * Build the expandable body of a gatekeeper-style walkthrough: intro text,
+ * then one titled figure per step (desc + screenshot). Screenshot paths and
+ * captions come from data.js so the text and assets are versioned together.
+ */
+function buildGuideBody(guide) {
+  const body = document.createElement("div");
+  body.className = "install-guide-body";
+  if (guide.intro) {
+    const intro = document.createElement("p");
+    intro.className = "install-guide-intro";
+    intro.textContent = guide.intro;
+    body.append(intro);
+  }
+  const steps = document.createElement("ol");
+  steps.className = "install-guide-steps";
+  guide.steps.forEach((step) => {
+    const li = document.createElement("li");
+    li.className = "install-guide-step";
+    const heading = document.createElement("h4");
+    heading.className = "install-guide-step-title";
+    heading.textContent = step.title;
+    const desc = document.createElement("p");
+    desc.className = "install-guide-step-desc";
+    desc.textContent = step.desc;
+    li.append(heading, desc);
+    if (step.img) {
+      const figure = document.createElement("figure");
+      figure.className = "install-guide-figure";
+      const img = document.createElement("img");
+      img.src = step.img;
+      img.alt = step.alt || "";
+      img.loading = "lazy";
+      figure.append(img);
+      if (step.caption) {
+        const caption = document.createElement("figcaption");
+        caption.textContent = step.caption;
+        figure.append(caption);
+      }
+      li.append(figure);
+    }
+    steps.append(li);
+  });
+  body.append(steps);
+  return body;
+}
+
 class App {
   constructor(data) {
     this.data = data;
@@ -361,12 +408,37 @@ class App {
       });
       panel.append(steps);
 
-      // Note
+      // Note — plain string, or an object carrying an expandable guide
+      // (the macOS Gatekeeper walkthrough). Either way the note text is the
+      // visible part; the guide is collapsed behind a <details> so the
+      // default install panel stays small.
       if (platform.note) {
-        const note = document.createElement("div");
-        note.className = "install-note";
-        note.textContent = platform.note;
-        panel.append(note);
+        const note =
+          typeof platform.note === "string"
+            ? { text: platform.note }
+            : platform.note;
+        if (note.guide) {
+          const details = document.createElement("details");
+          details.className = "install-guide";
+          const summary = document.createElement("summary");
+          summary.className = "install-note install-guide-summary";
+          const text = document.createElement("span");
+          text.className = "install-guide-summary-text";
+          text.textContent = note.text;
+          const marker = document.createElement("span");
+          // Same affordance the Q&A accordion uses (chevron + focusable
+          // summary), so expanding behaves the same everywhere on the page.
+          marker.className = "faq-marker";
+          marker.setAttribute("aria-hidden", "true");
+          summary.append(text, marker);
+          details.append(summary, buildGuideBody(note.guide));
+          panel.append(details);
+        } else {
+          const noteEl = document.createElement("div");
+          noteEl.className = "install-note";
+          noteEl.textContent = note.text;
+          panel.append(noteEl);
+        }
       }
 
       // Release page link — where checksums and every other artifact for this
@@ -646,6 +718,18 @@ class App {
       parasFrag.append(p);
     });
     parasEl.replaceChildren(parasFrag);
+
+    // Some answers carry a screenshot walkthrough (the Gatekeeper bypass);
+    // rendered collapsed inside <details> so a long answer does not dominate
+    // the accordion — expanding follows the browser's own <summary> semantics.
+    if (item.guide) {
+      const guide = document.createElement("details");
+      guide.className = "install-guide faq-guide";
+      const summary = document.createElement("summary");
+      summary.textContent = guide.title || "Step-by-step walkthrough";
+      guide.append(summary, buildGuideBody(item.guide));
+      parasEl.append(guide);
+    }
 
     // The code block and the note are optional; hide the wrapper rather than
     // cloning variants of the template.

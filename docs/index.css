@@ -1136,6 +1136,134 @@ body {
   content: "ℹ️  ";
 }
 
+/* Expandable walkthrough note. The note text doubles as the <summary>; the
+   detailed steps + screenshots stay collapsed by default so the install panel
+   keeps its size. Same <details> pattern, and the same chevron, as the Q&A
+   accordion above. */
+.install-guide {
+  border-radius: var(--radius-sm);
+}
+.install-guide-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  list-style: none;
+  cursor: pointer;
+}
+.install-guide-summary::-webkit-details-marker {
+  display: none;
+}
+.install-guide-summary:hover {
+  color: #fff;
+}
+.install-guide-summary:focus-visible {
+  outline: 2px solid var(--sb-cyan);
+  outline-offset: -2px;
+}
+.install-guide[open] > .install-guide-summary {
+  color: #fff;
+}
+.install-guide-summary-text {
+  min-width: 0;
+}
+.install-guide-summary .faq-marker {
+  transition: none;
+}
+.install-guide[open] .faq-marker {
+  transform: rotate(-135deg);
+}
+.install-guide-body {
+  padding: 0 1rem 1rem;
+  background: rgba(251, 191, 36, 0.04);
+  border: 1px solid rgba(251, 191, 36, 0.12);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--sb-muted);
+  line-height: 1.7;
+}
+.install-guide-intro {
+  margin: 0 0 0.9rem;
+}
+.install-guide-steps {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.install-guide-step-title {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sb-text);
+}
+.install-guide-step-desc {
+  margin: 0;
+}
+/* Screenshots: capped so a full-resolution macOS window never forces the panel
+   (or the phone viewport) wider than it is. */
+.install-guide-figure {
+  margin: 0.6rem 0 0;
+}
+.install-guide-figure img {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 22rem;
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.install-guide-figure figcaption {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--sb-muted);
+}
+
+/* The Q&A variant reuses the same body, but its summary is a bare control
+   inside the answer — the note styling would fight the accordion card. */
+.faq-guide {
+  margin-top: 0.9rem;
+}
+.faq-guide > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sb-cyan);
+  background: rgba(34, 211, 238, 0.05);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 999px;
+  list-style: none;
+  cursor: pointer;
+}
+.faq-guide > summary::-webkit-details-marker {
+  display: none;
+}
+.faq-guide > summary:hover {
+  background: rgba(34, 211, 238, 0.1);
+}
+.faq-guide > summary:focus-visible {
+  outline: 2px solid var(--sb-cyan);
+  outline-offset: 2px;
+}
+.faq-guide[open] > summary {
+  width: 100%;
+  border-radius: var(--radius-sm);
+}
+.faq-guide .install-guide-body {
+  margin-top: 0.9rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--radius-sm);
+}
+
 /* Bare wrapper used to group the prerequisite intro on the dev page. */
 .prose-muted {
   display: block;
