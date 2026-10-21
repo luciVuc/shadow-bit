@@ -31,6 +31,7 @@
     "check-version": "node scripts/bump-version.js --check",
     "sync-repo-url": "node scripts/sync-repo-url.js",
     "check-releases": "node scripts/check-released-versions.js",
+    "check:npm-pack": "node scripts/check-npm-pack.mjs",
     "test": "node --import tsx --test src/test/*.test.ts",
     "test:gui": "node --import tsx --test e2e/smoke.test.ts",
     "test:gui:headless": "SHADOWBIT_HEADLESS=1 node --import tsx --test e2e/smoke.test.ts",
@@ -42,7 +43,7 @@
     "test:site": "node --import tsx --test e2e/nfr.site.test.ts",
     "test:nfr": "npm run test:a11y && npm run test:responsive && npm run test:perf && npm run test:site",
     "test:packaged": "node scripts/check-packaged.mjs",
-    "verify": "npm run build && npm test && npm run test:cli-e2e && npm run test:gui && npm run test:nfr",
+    "verify": "npm run build && npm run check:npm-pack && npm test && npm run test:cli-e2e && npm run test:gui && npm run test:nfr",
     "icons": "bash scripts/make-icons.sh",
     "cli": "tsx src/cli/index.ts",
     "gui": "npm run build && electron dist/gui/main.js",
@@ -138,5 +139,11 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "files": [
+    "dist/cli/**/*",
+    "dist/core/**/*",
+    "package.json",
+    "README.md"
+  ]
 }

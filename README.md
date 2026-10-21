@@ -382,6 +382,25 @@ download links point. Artifacts are deliberately _not_ committed to the repo
 instead — git is a source store, and the Linux AppImage alone exceeds GitHub's
 100 MiB per-file limit for a repository.
 
+### The npm package
+
+Releasing a tag also publishes the package to npm (`publish-npm` job in
+`.github/workflows/release.yml`), which is what makes the site's install line
+(`npm install -g shadow-bit`) work. The tarball is CLI-only:
+
+- `files` in package.json scopes it to `dist/cli/**` + `dist/core/**` — the
+  Electron app, its renderer assets and the compiled tests stay out. npm also
+  forces in the `main` entry (`dist/gui/main.js`) and `LICENSE` itself.
+- `npm run check:npm-pack` (part of `npm run verify`) runs `npm pack
+--dry-run` and fails if anything outside that scope ships: a stray `dist/`
+  directory, a missing shebang on the bin entry, or Electron creeping into
+  `dependencies`. Production dependencies are just `commander` and
+  `picocolors`, so a global install pulls a fraction of a megabyte.
+- `prepublishOnly` runs the build, and the CI job publishes with `--provenance`.
+  The one prerequisite outside the repo is the `NPM_TOKEN` repository secret
+  (an npm automation token). Cutting the version with `npm version <a.b.c>`,
+  then pushing the tag, is all the flow needs.
+
 ### The download section
 
 `docs/data.js` declares `releases` (the published version list, newest first)

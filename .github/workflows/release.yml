@@ -310,3 +310,42 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # npm publication runs from the SAME tag build that produced the GitHub
+  # Release, so npm and the site cannot drift apart: the site's install line
+  # (npm install -g shadow-bit) and its version badges all read from
+  # package.json — the same file npm publishes.
+  #
+  # Requires the repository secret NPM_TOKEN (an npm automation token with
+  # publish rights to the "shadow-bit" package). Provenance is enabled via
+  # id-token: write below; it ties the published tarball to this repository
+  # and workflow, which does NOT change the install path, only what npmjs.com
+  # displays about how it was built.
+  #
+  # `files` in package.json scopes the tarball to dist/cli + dist/core (see
+  # scripts/check-npm-pack.mjs, wired into `verify`, so a fat tarball fails
+  # a test job before this job ever runs). `prepublishOnly` rebuilds dist/
+  # inside this job, so the published artifacts are the same code that was
+  # just gated and packaged for the GitHub Release.
+  publish-npm:
+    name: Publish npm package
+    needs: [build-test, gui-smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      # Publish, not --dry-run: prepublishOnly runs `npm run build` as part of
+      # this step, so dist/ is fresh here. `--access public` is required
+      # exactly once: a scoped package is private by default, and this
+      # package is unscoped, so it is a no-op kept for symmetry.
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
