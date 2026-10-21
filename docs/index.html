@@ -295,10 +295,10 @@
               <pre
                 class="recipe-code"
               ><code># Create — you will be prompted for a password
-./shadow-bit create shared --no-recovery
-./shadow-bit open shared
+shadow-bit create shared --no-recovery
+shadow-bit open shared
 cp report.pdf &lt;working-folder&gt;/
-./shadow-bit close shared
+shadow-bit close shared
 
 # Send shared.svlt via email/USB
 # Recipient opens with the same password</code></pre>
@@ -309,7 +309,7 @@ cp report.pdf &lt;working-folder&gt;/
               <pre
                 class="recipe-code"
               ><code># Use the recovery key printed at creation
-./shadow-bit recover project
+shadow-bit recover project
 # Recovery key: A7KX9-MP2VQ-8NW4T-…
 # New password: ********
 # ✓ Password reset via recovery key.</code></pre>
@@ -325,22 +325,22 @@ cp report.pdf &lt;working-folder&gt;/
 # your shell history.
 export SHADOWBIT_PASSWORD="$VAULT_PASS"
 
-./shadow-bit create backup --no-recovery
-./shadow-bit open backup
+shadow-bit create backup --no-recovery
+shadow-bit open backup
 rsync -av ~/Documents/ &lt;working-folder&gt;/
-./shadow-bit close backup</code></pre>
+shadow-bit close backup</code></pre>
             </div>
 
             <div class="recipe-card">
               <div class="recipe-title">Migrate an existing folder</div>
               <pre class="recipe-code"><code># One command seeds from a folder
-./shadow-bit create secrets \
+shadow-bit create secrets \
   --seed ~/Documents/secrets
 
 # Verify contents
-./shadow-bit open secrets
+shadow-bit open secrets
 ls &lt;working-folder&gt;
-./shadow-bit discard secrets</code></pre>
+shadow-bit discard secrets</code></pre>
             </div>
           </div>
         </div>

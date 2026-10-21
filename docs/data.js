@@ -145,7 +145,7 @@ window.APP_DATA = {
       icon: "✨",
       color: "cyan",
       desc: "Create a new vault file. Set a strong password. Optionally generate a recovery key, add a keyfile second factor, choose a cipher, or seed from an existing folder.",
-      code: "./shadow-bit create secrets --seed ./my-docs",
+      code: "shadow-bit create secrets --seed ./my-docs",
     },
     {
       step: "02",
@@ -153,7 +153,7 @@ window.APP_DATA = {
       icon: "🔓",
       color: "indigo",
       desc: "Decrypt the vault to a temporary working folder. Edit files with your normal file manager or any application. The vault file stays encrypted on disk.",
-      code: "./shadow-bit open secrets",
+      code: "shadow-bit open secrets",
     },
     {
       step: "03",
@@ -161,7 +161,7 @@ window.APP_DATA = {
       icon: "✏️",
       color: "violet",
       desc: "Add, edit, or delete files in the working folder using any tool. Use the add command to copy files in bulk from the CLI.",
-      code: "./shadow-bit add secrets ./report.pdf ./photos/",
+      code: "shadow-bit add secrets ./report.pdf ./photos/",
     },
     {
       step: "04",
@@ -169,7 +169,7 @@ window.APP_DATA = {
       icon: "🔒",
       color: "emerald",
       desc: "Re-encrypt the working folder back into the vault. The temporary folder is securely wiped. The vault file is updated and its timestamps scrubbed to epoch.",
-      code: "./shadow-bit close secrets",
+      code: "shadow-bit close secrets",
     },
   ],
 
@@ -340,7 +340,7 @@ window.APP_DATA = {
     title: "Prefer the command line?",
     desc: "The CLI is the same engine the desktop app uses. Install it with one command — no build step, no dependencies to manage.",
     code: "npm install -g shadow-bit\nshadow-bit --help",
-    note: "Every command that needs a password prompts for it invisibly. Nothing is stored in your shell history.",
+    note: "Every command that needs a password prompts for it invisibly. Nothing is stored in your shell history. Every command example on this site assumes this global install — the command is shadow-bit, on your PATH, not a script in a project folder.",
   },
 
   // ─── CLI command reference ────────────────────────────────────────────
@@ -350,89 +350,89 @@ window.APP_DATA = {
       flags:
         "--password, --no-recovery, --seed <dir>, --name <text>, --description <text>, --keyfile <path...>, --cipher <alg>, --paranoid",
       desc: "Create a new encrypted vault. Prompts for a password and prints a one-time recovery key. Advanced: add a keyfile second factor, choose ChaCha20-Poly1305, or strip all header metadata with --paranoid (which overrides --name/--description).",
-      example: "./shadow-bit create project --seed ./my-files --paranoid",
+      example: "shadow-bit create project --seed ./my-files --paranoid",
     },
     {
       cmd: "open <name>",
       flags: "--password, --keyfile <path...>",
       desc: "Decrypt the vault to a temporary working folder. The path is printed. Keyfile paths are remembered for the session duration.",
-      example: "./shadow-bit open project --keyfile ~/usb/key.bin",
+      example: "shadow-bit open project --keyfile ~/usb/key.bin",
     },
     {
       cmd: "close <name>",
       flags: "--password, --keyfile <path...>",
       desc: "Re-encrypt the working folder back into the vault and securely wipe the temp dir. Keyfiles are auto-read from the session — no need to pass --keyfile explicitly.",
-      example: "./shadow-bit close project",
+      example: "shadow-bit close project",
     },
     {
       cmd: "discard <name>",
       flags: "--password, --keyfile <path...>",
       desc: "Throw away unsaved changes. Requires the vault password to authenticate the destructive operation, then securely wipes the working folder.",
-      example: "./shadow-bit discard project",
+      example: "shadow-bit discard project",
     },
     {
       cmd: "add <name> <files…>",
       flags: "(none — vault must be open)",
       desc: "Copy files or folders into an open vault's working directory. Run close to re-encrypt and save.",
-      example: "./shadow-bit add project ./report.pdf ./photos/",
+      example: "shadow-bit add project ./report.pdf ./photos/",
     },
     {
       cmd: "info <name>",
       flags: "(none — no password needed)",
       desc: "Show vault metadata: version, size, recovery key status, cipher, whether a keyfile is required, compression, timestamps. Does not decrypt the payload and needs no password.",
-      example: "./shadow-bit info project",
+      example: "shadow-bit info project",
     },
     {
       cmd: "list",
       flags: "(none)",
       desc: "List all currently open vault sessions with their working folder paths and open times.",
-      example: "./shadow-bit list",
+      example: "shadow-bit list",
     },
     {
       cmd: "change-password <name>",
       flags:
         "--password, --new-password, --keyfile <path...>, --new-keyfile <path...>",
       desc: "Change the vault password. Only the master key is re-wrapped — instant regardless of vault size. The payload is never re-encrypted. The current keyfile set carries over automatically; pass --new-keyfile to change it, or an empty list to drop the keyfile requirement.",
-      example: "./shadow-bit change-password project --keyfile ~/usb/key.bin",
+      example: "shadow-bit change-password project --keyfile ~/usb/key.bin",
     },
     {
       cmd: "recover <name>",
       flags: "--recovery-key, --new-password",
       desc: "Reset a forgotten password using the recovery key. Both flags are deprecated (they leak through ps); omitting them prompts for the recovery key visibly — it is 40 Base32 characters in fixed groups, and a masked field hides exactly the one mistyped character that makes recovery fail. The new password is never read from an environment variable, so a fully unattended recover needs the deprecated flags.",
-      example: "./shadow-bit recover project",
+      example: "shadow-bit recover project",
     },
     {
       cmd: "recovery-key <name>",
       flags:
         "--password, --keyfile <path...>, --remove, --upgrade, --recovery-key",
       desc: "Manage the recovery key: generate a new one (old key immediately invalidated), remove it entirely, or upgrade a legacy v1 escrow to the current salted v2 format (same key stays valid). Pass --keyfile on a keyfile-protected vault.",
-      example: "./shadow-bit recovery-key project --remove",
+      example: "shadow-bit recovery-key project --remove",
     },
     {
       cmd: "meta <name>",
       flags:
         "--password, --name <text>, --description <text>, --keyfile <path...>",
       desc: "Get or set plaintext vault metadata. With no flags, shows current metadata (no password needed). With --name or --description, updates the header (requires password, plus --keyfile on a keyfile vault). Setting it on a paranoid-mode vault is allowed, but warns: that mode exists to keep the header free of optional plaintext, and this is plaintext.",
-      example: "./shadow-bit meta project --name 'Tax 2025'",
+      example: "shadow-bit meta project --name 'Tax 2025'",
     },
     {
       cmd: "delete <name>",
       flags:
         "--password, --keyfile <path...>, --shred, --passes <n>, -y / --yes",
       desc: "Permanently delete the vault file. Requires the vault password (and --keyfile on a keyfile-protected vault). Use --shred to overwrite bytes with random data first (best-effort on SSDs and copy-on-write filesystems).",
-      example: "./shadow-bit delete project --shred --passes 7",
+      example: "shadow-bit delete project --shred --passes 7",
     },
     {
       cmd: "shred <name>",
       flags: "--password, --keyfile <path...>, --passes <n>, -y / --yes",
       desc: "Alias for delete --shred. Overwrites vault bytes before deleting. Best-effort on SSDs. Pass --keyfile on a keyfile-protected vault.",
-      example: "./shadow-bit shred project -y",
+      example: "shadow-bit shred project -y",
     },
     {
       cmd: "clean",
       flags: "(none)",
       desc: "Remove stale sessions whose working directory or vault file no longer exists (e.g. after a crash or reboot). Securely erases any orphaned plaintext directories found.",
-      example: "./shadow-bit clean",
+      example: "shadow-bit clean",
     },
   ],
 
@@ -572,7 +572,7 @@ window.APP_DATA = {
             "A vault is one .svlt file. Creating one packs a folder into a single encrypted bundle. Opening it decrypts that bundle into a temporary working folder you can edit with ordinary tools. Closing packs the folder back, re-encrypts, and securely wipes the working copy.",
             "The .svlt file itself is never edited in place — only the working folder is. That is why you can use Finder, Explorer or a text editor on the contents and still get them back encrypted.",
           ],
-          code: "./shadow-bit create project --seed ./my-files\n./shadow-bit open project\n# edit files in the folder it printed\n./shadow-bit close project",
+          code: "shadow-bit create project --seed ./my-files\nshadow-bit open project\n# edit files in the folder it printed\nshadow-bit close project",
         },
         {
           q: "Where are my files while a vault is open?",
@@ -632,7 +632,7 @@ window.APP_DATA = {
             "Pass --keyfile at creation. The first 1 MiB of that file is hashed and mixed into the key derivation, so from then on both the password and the exact keyfile are required — the password alone derives a different key and opens nothing.",
             "Every command that authenticates against a vault accepts --keyfile. open remembers it for the session, so close and discard find it on their own; one-shot commands need it again.",
           ],
-          code: "# Create with a keyfile second factor\n./shadow-bit create secret --keyfile ~/keys/vault.key\n\n# Open … then close (keyfile read from the session)\n./shadow-bit open  secret --keyfile ~/keys/vault.key\n./shadow-bit close secret\n\n# One-shot commands need it again\n./shadow-bit change-password secret --keyfile ~/keys/vault.key\n./shadow-bit recovery-key  secret --keyfile ~/keys/vault.key --remove\n./shadow-bit meta         secret --keyfile ~/keys/vault.key --name 'Tax 2025'\n./shadow-bit shred        secret --keyfile ~/keys/vault.key -y",
+          code: "# Create with a keyfile second factor\nshadow-bit create secret --keyfile ~/keys/vault.key\n\n# Open … then close (keyfile read from the session)\nshadow-bit open  secret --keyfile ~/keys/vault.key\nshadow-bit close secret\n\n# One-shot commands need it again\nshadow-bit change-password secret --keyfile ~/keys/vault.key\nshadow-bit recovery-key  secret --keyfile ~/keys/vault.key --remove\nshadow-bit meta         secret --keyfile ~/keys/vault.key --name 'Tax 2025'\nshadow-bit shred        secret --keyfile ~/keys/vault.key -y",
           note: {
             tone: "warn",
             text: "Keep the keyfile somewhere other than the vault — a USB stick, ideally. Losing it loses the vault: the keyfile is hashed into the derived password, so the recovery key cannot stand in for it.",
@@ -644,14 +644,14 @@ window.APP_DATA = {
             "At creation only — the algorithm is recorded in the vault header and there is no command to change it on an existing vault. Choose ChaCha20-Poly1305 if you would rather not depend on hardware AES acceleration, or want diversity against future cryptanalytic progress on a single algorithm.",
             "To move an existing vault to the other cipher, create a new one with the cipher you want and copy the files across while it is open.",
           ],
-          code: "./shadow-bit create secret --cipher chacha20-poly1305",
+          code: "shadow-bit create secret --cipher chacha20-poly1305",
         },
         {
           q: "How do I create a vault with no timestamps or metadata?",
           a: [
             "Paranoid mode pins the header's created and modified timestamps to 1970-01-01 and drops the name and description. It survives every later write — close, password change and recovery all keep writing epoch timestamps — and it is the smallest header footprint ShadowBit can produce.",
           ],
-          code: "./shadow-bit create secret --paranoid --keyfile ~/keys/vault.key --cipher chacha20-poly1305",
+          code: "shadow-bit create secret --paranoid --keyfile ~/keys/vault.key --cipher chacha20-poly1305",
           note: {
             tone: "info",
             text: "You can still add a description afterwards with 'shadow-bit meta'. It is allowed, and it warns you — the text is stored in plaintext in the header, readable by anyone who has the file.",
@@ -662,7 +662,7 @@ window.APP_DATA = {
           a: [
             "Create it, put the files in, close it, send the single .svlt file, and share the password over a different channel. The recipient needs the file and the password — nothing else, and no account on your side.",
           ],
-          code: "# Sender\n./shadow-bit create shared --no-recovery\n./shadow-bit open  shared\n# copy files into the working folder it printed\n./shadow-bit close shared\n\n# Send shared.svlt; give the password over a call or in person\n\n# Recipient\n./shadow-bit open received.svlt",
+          code: "# Sender\nshadow-bit create shared --no-recovery\nshadow-bit open  shared\n# copy files into the working folder it printed\nshadow-bit close shared\n\n# Send shared.svlt; give the password over a call or in person\n\n# Recipient\nshadow-bit open received.svlt",
         },
         {
           q: "How do I automate this in a script or cron job?",
@@ -670,7 +670,7 @@ window.APP_DATA = {
             "Use the SHADOWBIT_PASSWORD environment variable. Prefer it over --password: a command-line argument is visible to every user on the machine through ps, and is recorded in your shell history. ShadowBit reads the variable once and then deletes it from its own environment.",
             "Both open and close are needed around whatever you want to capture — that is the only way to get plaintext into a vault from a script.",
           ],
-          code: 'export SHADOWBIT_PASSWORD="$VAULT_PASS"\n\n./shadow-bit create backup --no-recovery\n./shadow-bit open backup\nWD="$(./shadow-bit info backup | awk \'/Working dir/{print $3}\')"\nrsync -av ~/Documents/ "$WD/"\n./shadow-bit close backup',
+          code: 'export SHADOWBIT_PASSWORD="$VAULT_PASS"\n\nshadow-bit create backup --no-recovery\nshadow-bit open backup\nWD="$(shadow-bit info backup | awk \'/Working dir/{print $3}\')"\nrsync -av ~/Documents/ "$WD/"\nshadow-bit close backup',
           note: {
             tone: "warn",
             text: "recover has no environment variable for the recovery key — it is always prompted, visibly. An unattended password reset needs the deprecated --recovery-key / --new-password flags, which leak through ps.",
@@ -682,21 +682,21 @@ window.APP_DATA = {
             "info reads the plaintext header only: format version, file size, whether a recovery key exists, which cipher, whether a keyfile is required, and whether the vault is currently open. It needs no password and decrypts nothing.",
             "The file listing lives inside the encrypted payload, so there is nothing to show without the password — that is the point.",
           ],
-          code: "./shadow-bit info project\n./shadow-bit list   # every vault currently open on this machine",
+          code: "shadow-bit info project\nshadow-bit list   # every vault currently open on this machine",
         },
         {
           q: "How do I rotate the recovery key, or remove it?",
           a: [
             "Running recovery-key with no options mints a new key and immediately invalidates the old one. --remove deletes the escrow entirely, leaving the password as the only way in — which is a real loss of recoverability, so keep it in mind.",
           ],
-          code: "./shadow-bit recovery-key project          # new key; the old one stops working\n./shadow-bit recovery-key project --remove  # password is now the only way in",
+          code: "shadow-bit recovery-key project          # new key; the old one stops working\nshadow-bit recovery-key project --remove  # password is now the only way in",
         },
         {
           q: "How do I delete a vault for good?",
           a: [
             "delete removes the file; shred overwrites its bytes with random data first, --passes times (3 by default). Both authenticate with the password, and both accept --keyfile on a keyfile-protected vault, so nothing happens by accident.",
           ],
-          code: "./shadow-bit shred project --passes 7\n./shadow-bit delete project",
+          code: "shadow-bit shred project --passes 7\nshadow-bit delete project",
           note: {
             tone: "warn",
             text: "Overwriting is best-effort. SSDs, APFS and other copy-on-write filesystems use wear-leveling and snapshots, so old blocks can survive. Full-disk encryption is what actually makes the old data unrecoverable.",
@@ -708,7 +708,7 @@ window.APP_DATA = {
             "Sessions live in ~/.shadow-bit/sessions.json and point at working folders in the temp directory. After a reboot those folders are gone but the entries may not be, so clean drops any session whose working folder or vault file no longer exists — and securely erases an orphaned folder if one somehow survived.",
             "Opening a vault whose stale session points at a deleted folder works anyway: ShadowBit notices the folder is missing and decrypts afresh.",
           ],
-          code: "./shadow-bit list     # what ShadowBit thinks is open\n./shadow-bit clean    # drop entries whose folder or vault is gone",
+          code: "shadow-bit list     # what ShadowBit thinks is open\nshadow-bit clean    # drop entries whose folder or vault is gone",
         },
       ],
     },
@@ -791,7 +791,7 @@ window.APP_DATA = {
             "One message covers three causes on purpose. A wrong password, a corrupted file and a tampered payload all surface as an AEAD authentication failure, and telling them apart would hand an attacker an oracle.",
             'Work through it in this order: check the password first (caps lock, keyboard layout, a password manager that autofills a different one); then run info, which reads the header without a password and will tell you outright if the file is not a vault at all; then, if a recovery key exists, use it. Recovery only needs the header, so a wrong key still reports "Incorrect recovery key" even when the payload is the damaged part — but note it re-wraps the key rather than repairing the payload, so a vault that was already corrupt stays corrupt.',
           ],
-          code: "./shadow-bit info project    # header only, no password\n./shadow-bit recover project  # needs just the recovery key",
+          code: "shadow-bit info project    # header only, no password\nshadow-bit recover project  # needs just the recovery key",
         },
         {
           q: "“This vault requires a keyfile.”",
@@ -813,7 +813,7 @@ window.APP_DATA = {
             "close and discard need an open session: a working folder on disk that ShadowBit still tracks. Open the vault first.",
             "If the session is stale — a reboot, or a working folder deleted by hand — list shows what ShadowBit believes is open, and clean drops entries whose working folder or vault file no longer exists.",
           ],
-          code: "./shadow-bit list\n./shadow-bit clean",
+          code: "shadow-bit list\nshadow-bit clean",
         },
         {
           q: "“This vault expands to more than 1.5 GiB of data…”",
@@ -848,7 +848,7 @@ window.APP_DATA = {
           a: [
             "Yes. You need the .svlt file, the password, and any keyfile it requires. Nothing has to be registered or configured first: run open on the file, or pick it in the desktop app.",
           ],
-          code: "./shadow-bit open received.svlt",
+          code: "shadow-bit open received.svlt",
         },
       ],
     },
@@ -876,7 +876,7 @@ window.APP_DATA = {
       },
       {
         title: "Run the CLI straight from source (no build step)",
-        code: "npm run cli -- --help\n# or, without npm:\n./shadow-bit --help",
+        code: "npm run cli -- --help\n# or, from a built repo: node dist/cli/index.js --help",
       },
       {
         title: "Build the desktop app and launch it",
