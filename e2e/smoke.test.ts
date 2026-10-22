@@ -1007,10 +1007,10 @@ describe("ShadowBit application menu", () => {
     const snapshot = await app.evaluate(snapshotMenu);
     assert.deepEqual(
       Object.keys(snapshot),
-      // macOS leads with the app menu; other platforms start at File.
+      // macOS leads with the app menu; Help (which hosts About) trails on all.
       isMac
-        ? ["ShadowBit", "File", "Edit", "View", "Window"]
-        : ["File", "Edit", "View", "Window"],
+        ? ["ShadowBit", "File", "Edit", "View", "Window", "Help"]
+        : ["File", "Edit", "View", "Window", "Help"],
     );
 
     const file = snapshot["File"].map((i) => i.label);
@@ -1208,5 +1208,111 @@ describe("ShadowBit application menu", () => {
     await waitForLockEnabled(false);
     // Locking is not deleting: the vault itself must survive.
     assert.ok(fs.existsSync(lockVaultPath), "vault file must survive a lock");
+  });
+
+  test("Help menu opens the About dialog with the app version", async () => {
+    const aboutMenu = isMac ? "ShadowBit" : "Help";
+    await click(aboutMenu, "About ShadowBit");
+    await page.waitForSelector("#about-modal:not(.hidden)", {
+      timeout: UI_TIMEOUT,
+    });
+    const expected = await app.evaluate(({ app: e }) => e.getVersion());
+    await page.waitForFunction(
+      (goal) => document.getElementById("about-version")?.textContent === goal,
+      expected,
+      { timeout: UI_TIMEOUT },
+    );
+    // Escape dismisses the dialog and focus handling does not lock up the page.
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#about-modal.hidden", { timeout: UI_TIMEOUT });
+  });
+
+  test("update-available badge appears, opens the release page, clears", async () => {
+    const push = (info: unknown) =>
+      app.evaluate(({ BrowserWindow }: typeof import("electron"), payload) => {
+        BrowserWindow.getAllWindows()[0].webContents.send(
+          "app:updateAvailable",
+          payload,
+        );
+      }, info);
+
+    await push({
+      latest: "9.9.9",
+      url: "https://github.com/luciVuc/shadow-bit/releases/latest",
+    });
+    await page.waitForSelector("#update-btn:not(.hidden)", {
+      timeout: UI_TIMEOUT,
+    });
+    const text = await page.textContent("#update-btn");
+    assert.match(
+      text ?? "",
+      /9\.9\.9/,
+      `badge should name the version, got ${text}`,
+    );
+
+    await page.click("#update-btn");
+    // IS_E2E records rather than calls shell.openExternal, so nothing pops.
+    const opened = (await app.evaluate(() => {
+      (globalThis as any).__shadowbitOpenUrls ??= [];
+      return (globalThis as any).__shadowbitOpenUrls;
+    })) as string[];
+    assert.ok(
+      opened.some((u) => u.includes("/releases/latest")),
+      `clicking the badge must request the release page, got ${JSON.stringify(opened)}`,
+    );
+
+    // A null payload clears the badge (settings toggling the check off).
+    await push(null);
+    await page.waitForSelector("#update-btn.hidden", { timeout: UI_TIMEOUT });
+  });
+
+  test("settings modal toggles automatic update checks", async () => {
+    await page.click("#settings-btn");
+    await page.waitForSelector("#settings-modal:not(.hidden)", {
+      timeout: UI_TIMEOUT,
+    });
+    // Default is ON (getCheckForUpdates treats non-false as enabled).
+    assert.ok(
+      await page.$eval(
+        "#update-check-toggle",
+        (el: HTMLInputElement) => el.checked,
+      ),
+      "automatic check should default to enabled",
+    );
+
+    await page.uncheck("#update-check-toggle");
+    await page.click("#settings-close");
+    await page.waitForSelector("#settings-modal.hidden", {
+      timeout: UI_TIMEOUT,
+    });
+    assert.equal(
+      await page.evaluate(() =>
+        (window as any).shadowbit
+          .getCheckForUpdates()
+          .then((r: any) => r.value),
+      ),
+      false,
+      "the stored preference should read back disabled",
+    );
+
+    // And back on, restoring the default state for later suites.
+    await page.click("#settings-btn");
+    await page.waitForSelector("#settings-modal:not(.hidden)", {
+      timeout: UI_TIMEOUT,
+    });
+    await page.check("#update-check-toggle");
+    await page.click("#settings-close");
+    await page.waitForSelector("#settings-modal.hidden", {
+      timeout: UI_TIMEOUT,
+    });
+    assert.equal(
+      await page.evaluate(() =>
+        (window as any).shadowbit
+          .getCheckForUpdates()
+          .then((r: any) => r.value),
+      ),
+      true,
+      "the stored preference should read back enabled",
+    );
   });
 });

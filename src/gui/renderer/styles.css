@@ -156,6 +156,63 @@ body {
   border-color: var(--border);
 }
 
+/* Update-available badge in the topbar. Pushed by the app's own update
+   checker; a <button> so the notification carries its action with it. */
+.update-badge {
+  background: var(--accent-solid);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 999px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.update-badge:hover {
+  background: var(--accent-solid-hover);
+}
+.update-badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* About dialog. Centre-heavy so it reads like a splash card rather than a
+   form; same modal scaffolding (.modal / .modal-box) as every other dialog. */
+.about-box {
+  text-align: center;
+}
+.about-logo {
+  font-size: 3rem;
+  margin-bottom: 4px;
+}
+.about-title {
+  margin-bottom: 4px;
+}
+.about-tagline {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+.about-version {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.about-version span {
+  font-weight: 700;
+}
+.about-update-status {
+  min-height: 20px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--ok);
+}
+.about-actions {
+  justify-content: center;
+  gap: 8px;
+}
+
 .tabs {
   display: flex;
   gap: 4px;

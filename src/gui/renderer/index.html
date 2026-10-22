@@ -38,6 +38,14 @@
       </div>
       <div class="topbar-actions">
         <button
+          class="update-badge hidden"
+          id="update-btn"
+          title="A new version is available — click to download"
+          aria-label="New version available: click to open the download page"
+        >
+          ⬆ New version available
+        </button>
+        <button
           class="icon-btn"
           id="theme-toggle"
           title="Toggle theme"
@@ -880,8 +888,58 @@
             <option value="system">System</option>
           </select>
         </div>
+        <div class="field">
+          <label class="checkbox" for="update-check-toggle">
+            <input
+              id="update-check-toggle"
+              type="checkbox"
+              checked
+              aria-describedby="update-check-hint"
+            />
+            Check for updates automatically
+          </label>
+          <p class="hint" id="update-check-hint" style="margin-top: 2px">
+            Notifies you in the app when a new ShadowBit version is published.
+          </p>
+        </div>
         <div class="row" style="justify-content: flex-end; margin-top: 16px">
           <button class="primary" id="settings-close">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- about modal. The single home of the app version and the manual update
+         check: the application menu's About item and the Help menu both land
+         here, on every platform. -->
+    <div
+      id="about-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-title"
+    >
+      <div class="modal-box about-box">
+        <div class="about-logo" aria-hidden="true">🗝️</div>
+        <h3 id="about-title" class="about-title">ShadowBit</h3>
+        <p class="about-tagline">
+          Stealth containers. Enhanced privacy. Total control.
+        </p>
+        <p class="about-version" aria-live="polite">
+          Version <span id="about-version"></span>
+        </p>
+        <div
+          class="about-update-status"
+          id="about-update-status"
+          aria-live="polite"
+        ></div>
+        <div class="row about-actions">
+          <button class="primary" id="about-check-updates">
+            Check for Updates
+          </button>
+          <button class="secondary" id="about-download" hidden>
+            Download Latest
+          </button>
+          <button class="secondary" id="about-close">Close</button>
         </div>
       </div>
     </div>

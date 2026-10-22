@@ -476,6 +476,120 @@ async function askConfirm(opts) {
 }
 
 // ---------------------------------------------------------------------------
+// Update badge
+// ---------------------------------------------------------------------------
+//
+// The main process checks GitHub Releases (scheduled, or on demand from the
+// About dialog) and pushes the outcome here. The badge is a real <button> that
+// opens the download page in the default browser, so the notification carries
+// its own action rather than depending on the user finding the About dialog.
+let updateAvailableInfo = null;
+
+function showUpdateBadge(info) {
+  const btn = $("update-btn");
+  if (!info || !info.latest || !info.url) {
+    updateAvailableInfo = null;
+    btn.classList.add("hidden");
+    return;
+  }
+  updateAvailableInfo = info;
+  btn.textContent = "⬆ " + info.latest + " available";
+  btn.classList.remove("hidden");
+}
+
+api.onUpdateAvailable((info) => showUpdateBadge(info));
+
+$("update-btn").onclick = async () => {
+  const url = updateAvailableInfo && updateAvailableInfo.url;
+  if (!url) return;
+  const res = await api.openExternal(url);
+  if (res && res.ok === false) err(res.error || "Could not open the browser.");
+};
+
+// ---------------------------------------------------------------------------
+// About modal
+// ---------------------------------------------------------------------------
+// One dialog, every platform: the application menu's About item (macOS app
+// menu) and the Help menu (Windows/Linux) both arrive as the "about" command,
+// and the same modal hosts the version display and the manual "Check for
+// Updates" action.
+let checkingUpdates = false;
+
+async function openAboutModal() {
+  if (!($("about-version").textContent)) {
+    try {
+      $("about-version").textContent = result(await api.getAppVersion());
+    } catch {
+      $("about-version").textContent = "unknown";
+    }
+  }
+  // Surface the last known check outcome — including the scheduled one —
+  // instead of a blank status on a modal whose badge twin is already visible.
+  aboutUpdateStatus(null);
+  if (updateAvailableInfo) {
+    aboutUpdateStatus({
+      isNew: true,
+      latest: updateAvailableInfo.latest,
+    });
+    $("about-download").hidden = false;
+  }
+  $("about-modal").classList.remove("hidden");
+  if (releaseFocusTrap) releaseFocusTrap();
+  releaseFocusTrap = trapFocus($("about-modal").querySelector(".modal-box"));
+}
+
+// Render the state of the "Check for Updates" button's outcome. `info` of null
+// clears; a string is a failure. `latest` on an isNew result is stored so the
+// badge and the dialog never disagree.
+function aboutUpdateStatus(info) {
+  const out = $("about-update-status");
+  const downloadBtn = $("about-download");
+  if (info === null) {
+    out.textContent = "";
+    return;
+  }
+  if (typeof info === "string") {
+    out.textContent = info;
+    return;
+  }
+  if (info.isNew) {
+    if (info.latest) updateAvailableInfo = { latest: info.latest, url: info.url || (updateAvailableInfo && updateAvailableInfo.url) };
+    out.textContent =
+      `Version ${info.latest} is available — click "Download Latest" to open ` +
+      `the releases page in your web browser.`;
+    if (updateAvailableInfo?.url) downloadBtn.hidden = false;
+    showUpdateBadge(updateAvailableInfo);
+  } else {
+    out.textContent = `You are up to date (version ${info.current}).`;
+    downloadBtn.hidden = true;
+  }
+}
+
+$("about-check-updates").onclick = async () => {
+  if (checkingUpdates) return;
+  checkingUpdates = true;
+  aboutUpdateStatus("Checking for updates…");
+  try {
+    const info = result(await api.checkForUpdates());
+    if (info.url) updateAvailableInfo = { latest: info.latest, url: info.url };
+    aboutUpdateStatus(info);
+  } catch (e) {
+    aboutUpdateStatus(e.message);
+  } finally {
+    checkingUpdates = false;
+  }
+};
+
+$("about-download").onclick = async () => {
+  const url = updateAvailableInfo && updateAvailableInfo.url;
+  if (!url) return;
+  const res = await api.openExternal(url);
+  if (res && res.ok === false) err(res.error || "Could not open the browser.");
+};
+
+$("about-close").onclick = () => closeModal("about-modal");
+
+// ---------------------------------------------------------------------------
 // Settings modal
 // ---------------------------------------------------------------------------
 async function openSettingsModal() {
@@ -489,6 +603,8 @@ async function openSettingsModal() {
     const tSel = $("theme-select");
     const tOpt = [...tSel.options].find((o) => o.value === theme);
     if (tOpt) tOpt.selected = true;
+    const checks = result(await api.getCheckForUpdates());
+    $("update-check-toggle").checked = checks !== false;
   } catch {
     /* best-effort */
   }
@@ -506,6 +622,10 @@ $("settings-close").onclick = async () => {
     const theme = $("theme-select").value;
     await api.setTheme(theme);
     applyTheme(theme);
+    // A real boolean: `!!$("update-check-toggle").checked`. setCheckForUpdates
+    // stores `=== true` and the scheduled loop re-arms (or cancels) itself in
+    // the main-process handler, so there is nothing else to do here.
+    await api.setCheckForUpdates($("update-check-toggle").checked === true);
   } catch {
     /* best-effort */
   }
@@ -591,6 +711,9 @@ api.onMenuCommand((cmd, arg) => {
       break;
     case "settings":
       openSettingsModal();
+      break;
+    case "about":
+      openAboutModal();
       break;
     case "theme":
       // The main process already persisted it; just apply it to the document.
@@ -1433,6 +1556,10 @@ async function init() {
   $("welcome-modal").addEventListener("modal:dismiss", () =>
     closeModal("welcome-modal"),
   );
+  $("about-modal").addEventListener("modal:dismiss", () =>
+    closeModal("about-modal"),
+  );
+  trapEscape("about-modal");
   trapEscape("settings-modal");
   trapEscape("welcome-modal");
   // The recovery-key modal is deliberately NOT dismissible: that key is shown

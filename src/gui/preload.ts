@@ -45,6 +45,18 @@ const api = {
   isOnboardingDone: () => ipcRenderer.invoke("settings:isOnboardingDone"),
   markOnboardingDone: () => ipcRenderer.invoke("settings:markOnboardingDone"),
 
+  // app info / updates
+  getAppVersion: () => ipcRenderer.invoke("app:getVersion"),
+  getCheckForUpdates: () => ipcRenderer.invoke("settings:getCheckForUpdates"),
+  setCheckForUpdates: (enabled: boolean) =>
+    ipcRenderer.invoke("settings:setCheckForUpdates", enabled),
+  checkForUpdates: () => ipcRenderer.invoke("updates:check"),
+  onUpdateAvailable: (
+    cb: (info: { latest: string; url: string } | null) => void,
+  ) => {
+    ipcRenderer.on("app:updateAvailable", (_event, info) => cb(info ?? null));
+  },
+
   // file association: listen for a vault path sent by the main process
   onOpenVaultFile: (cb: (filePath: string) => void) => {
     ipcRenderer.on("app:openVaultFile", (_event, filePath: string) =>
@@ -89,6 +101,9 @@ const api = {
 
   // system
   openPath: (p: string) => ipcRenderer.invoke("sys:openPath", p),
+  // openExternal: shell.openExternal behind a host allowlist in main.ts. The
+  // update badge and the About dialog are the only callers.
+  openExternal: (url: string) => ipcRenderer.invoke("sys:openExternal", url),
   copy: (text: string) => ipcRenderer.invoke("sys:copy", text),
   // copySecret: copies to clipboard and auto-clears after 30 s. Prefer this
   // over `copy` for anything sensitive — `copy` has no timer, so a secret

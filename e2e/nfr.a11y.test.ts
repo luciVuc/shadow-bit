@@ -69,7 +69,12 @@ function resetInjectedDom() {
   afterEach(async () => {
     await h.page
       .evaluate(() => {
-        for (const id of ["modal", "settings-modal", "welcome-modal"]) {
+        for (const id of [
+          "modal",
+          "settings-modal",
+          "welcome-modal",
+          "about-modal",
+        ]) {
           document.getElementById(id)?.classList.add("hidden");
         }
         const list = document.getElementById("sessions-list");

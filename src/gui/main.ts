@@ -17,7 +17,7 @@ import {
   screen,
 } from "electron";
 import * as path from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { loadSessions } from "../core/sessions";
 import { VAULT_EXT, VAULT_EXTS, hasVaultExt } from "../core/container";
@@ -34,6 +34,8 @@ import {
   saveWindowBounds,
   isOnboardingDone,
   markOnboardingDone,
+  getCheckForUpdates,
+  setCheckForUpdates,
   MIN_WINDOW_HEIGHT,
   MIN_WINDOW_WIDTH,
   type Theme,
@@ -78,6 +80,126 @@ function getArgFilePath(): string | null {
   const args = process.argv.slice(app.isPackaged ? 1 : 2);
   const vaultArg = args.find((a) => hasVaultExt(a) && existsSync(a));
   return vaultArg ? path.resolve(vaultArg) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Update checks
+// ---------------------------------------------------------------------------
+//
+// The GUI polls the GitHub Releases API for a newer version. Detection only —
+// no auto-download: the user is always sent to the release page they can read,
+// in keeping with an app whose users care about provenance.
+//
+// The repo URL is derived from package.json's `repository` field rather than
+// hardcoded, so a repo move cannot leave this file pointing somewhere else.
+// The fallback constant exists for the pathological case where the file cannot
+// be read; it matches the same field.
+
+const REPO_URL = (() => {
+  const FALLBACK = "https://github.com/luciVuc/shadow-bit";
+  try {
+    const pkg = JSON.parse(
+      readFileSync(path.join(__dirname, "../../package.json"), "utf8"),
+    );
+    const raw = pkg?.repository?.url ?? pkg?.repository ?? "";
+    const m = /^git\+?https:\/\/github\.com\/([^/]+)\/([^/.]+?)(\.git)?$/.exec(
+      String(raw),
+    );
+    return m ? `https://github.com/${m[1]}/${m[2]}` : FALLBACK;
+  } catch {
+    return FALLBACK;
+  }
+})();
+
+const RELEASES_URL = `${REPO_URL}/releases/latest`;
+const RELEASES_API_URL = `https://api.github.com/repos/${REPO_URL.replace("https://github.com/", "")}/releases/latest`;
+
+/**
+ * Tolerance-free semver comparison of "current vs latest". The version read
+ * via `app.getVersion()` is electron-builder's installed metadata, so it always
+ * agrees with package.json.
+ */
+function isNewerVersion(candidate: string, current: string): boolean {
+  const nums = (v: string) =>
+    v
+      .replace(/^v/i, "")
+      .split(".")
+      .map((p) => parseInt(p, 10) || 0);
+  const a = nums(candidate);
+  const b = nums(current);
+  for (let i = 0; i < 3; i++) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0);
+  }
+  return false;
+}
+
+export interface UpdateInfo {
+  current: string;
+  latest: string;
+  isNew: boolean;
+  url: string;
+}
+
+/** The most recent successful check's outcome, re-pushed after every reload. */
+let lastUpdateInfo: UpdateInfo | null = null;
+let updateCheckTimer: ReturnType<typeof setTimeout> | null = null;
+
+const UPDATE_CHECK_FIRST_DELAY_MS = 30_000;
+const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * One check against the GitHub API. Network errors are surfaced to the caller
+ * (its choice whether to report them): a scheduled check must stay silent, but
+ * the About dialog's button must not pretend every failure means "up to date".
+ */
+async function performUpdateCheck(): Promise<UpdateInfo> {
+  const current = app.getVersion();
+  const res = await fetch(RELEASES_API_URL, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "ShadowBit",
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) {
+    throw new Error(`GitHub API returned HTTP ${res.status}.`);
+  }
+  const data: any = await res.json();
+  const tag = typeof data?.tag_name === "string" ? data.tag_name : "";
+  const latest = tag.replace(/^v/i, "") || current;
+  const info: UpdateInfo = {
+    current,
+    latest,
+    isNew: isNewerVersion(latest, current),
+    url: RELEASES_URL,
+  };
+  if (info.isNew) {
+    lastUpdateInfo = info;
+    sendToRenderer("app:updateAvailable", {
+      latest: info.latest,
+      url: info.url,
+    });
+  }
+  return { ...info, isNew: info.isNew };
+}
+
+/**
+ * (Re)arm the scheduled check. Chained timeOuts rather than an interval, so a
+ * re-arm after a settings toggle cannot stack two concurrent loops. Skipped
+ * under E2E: the harness runs offline, and a request fired at window startup
+ * would otherwise leak into every smoke test.
+ */
+function scheduleAutoUpdateCheck(delayMs = UPDATE_CHECK_FIRST_DELAY_MS): void {
+  if (updateCheckTimer) {
+    clearTimeout(updateCheckTimer);
+    updateCheckTimer = null;
+  }
+  if (IS_E2E || !getCheckForUpdates()) return;
+  updateCheckTimer = setTimeout(() => {
+    void performUpdateCheck()
+      .catch(() => undefined)
+      .finally(() => scheduleAutoUpdateCheck(UPDATE_CHECK_INTERVAL_MS));
+  }, delayMs);
 }
 
 // ---------------------------------------------------------------------------
@@ -319,7 +441,9 @@ function rebuildAppMenu(): void {
     template.push({
       label: "ShadowBit",
       submenu: [
-        { role: "about", label: "About ShadowBit" },
+        // Opened in-app rather than Electron's native about panel, so the
+        // update-info surface lives in one place on every platform.
+        { label: "About ShadowBit", click: () => command("about") },
         { type: "separator" },
         settingsItem,
         { type: "separator" },
@@ -352,6 +476,12 @@ function rebuildAppMenu(): void {
             { type: "separator" },
             { role: "close" },
           ],
+    },
+    {
+      // The About dialog hosts the "Check for Updates" button, so the Help
+      // menu is where its manual entry point lives on Windows and Linux.
+      label: "Help",
+      submenu: [{ label: "About ShadowBit", click: () => command("about") }],
     },
   );
 
@@ -512,6 +642,14 @@ function createWindow(): void {
   win.webContents.on("did-finish-load", () => {
     rendererReady = true;
     flushPendingCommands();
+    // The badged button in the topbar survives a reload only if the state is
+    // re-pushed; a renderer reload clears otherwise.
+    if (lastUpdateInfo && lastUpdateInfo.isNew) {
+      win.webContents.send("app:updateAvailable", {
+        latest: lastUpdateInfo.latest,
+        url: lastUpdateInfo.url,
+      });
+    }
     const fp = pendingFilePath ?? getArgFilePath();
     if (fp) {
       win.webContents.send("app:openVaultFile", fp);
@@ -538,6 +676,7 @@ app.whenReady().then(() => {
   }
   rebuildAppMenu();
   createWindow();
+  scheduleAutoUpdateCheck();
   app.on("activate", () => {
     allowQuit = false;
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -926,6 +1065,79 @@ on("menu:setOpenVaultCount", (_e, count: number) => {
 
 handle("settings:isOnboardingDone", () => wrap(() => isOnboardingDone()));
 handle("settings:markOnboardingDone", () => wrap(() => markOnboardingDone()));
+
+// ---------------------------------------------------------------------------
+// IPC: app info and update checks
+// ---------------------------------------------------------------------------
+
+handle("app:getVersion", () => wrap(() => app.getVersion()));
+
+handle("settings:getCheckForUpdates", () => wrap(() => getCheckForUpdates()));
+handle("settings:setCheckForUpdates", (_e, enabled: boolean) =>
+  wrap(() => {
+    setCheckForUpdates(enabled === true);
+    // Turning the check off also clears any badge the check left behind:
+    // announcing "a new version is available" from a feature that was switched
+    // off is worse than not announcing it at all.
+    if (!getCheckForUpdates()) {
+      lastUpdateInfo = null;
+      sendToRenderer("app:updateAvailable", null);
+    }
+    scheduleAutoUpdateCheck();
+  }),
+);
+
+/**
+ * One manual check (About dialog). Unlike the scheduled check, failures here
+ * become an error the renderer can toast — "I clicked the button and nothing
+ * said anything either way" is not an answer.
+ */
+handle("updates:check", async () => {
+  try {
+    return { ok: true, value: await performUpdateCheck() };
+  } catch (e: any) {
+    return { ok: false, error: e.message ?? String(e) };
+  }
+});
+
+/**
+ * Open the release page in the user's default browser.
+ *
+ * The renderer never gets an unconditional "open whatever URL you send me"
+ * primitive: `sys:openPath` already exists for local files, and reusing it with
+ * a URL would be shell behaviour nobody audited. Instead this validator pins
+ * the protocol to https and the host to the app's own domains.
+ *
+ * Under E2E the target is recorded rather than opened, so smoke tests can
+ * assert on it without a browser popping up.
+ */
+const ALLOWED_EXTERNAL_HOSTS: ReadonlySet<string> = new Set([
+  "github.com",
+  "shadowbit.app",
+]);
+
+handle("sys:openExternal", async (_e, url: string) => {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { ok: false, error: "Not a valid URL." };
+  }
+  if (
+    parsed.protocol !== "https:" ||
+    !ALLOWED_EXTERNAL_HOSTS.has(parsed.hostname)
+  ) {
+    return { ok: false, error: `Refusing to open ${parsed.hostname}.` };
+  }
+  if (IS_E2E) {
+    const opened = (globalThis as any).__shadowbitOpenUrls ?? [];
+    opened.push(parsed.toString());
+    (globalThis as any).__shadowbitOpenUrls = opened;
+    return { ok: true, value: parsed.toString() };
+  }
+  await shell.openExternal(parsed.toString());
+  return { ok: true, value: parsed.toString() };
+});
 
 // ---------------------------------------------------------------------------
 // IPC: system helpers

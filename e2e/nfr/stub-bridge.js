@@ -23,6 +23,15 @@
 (function () {
   var calls = [];
   var overrides = {};
+  var listeners = {
+    onOpenVaultFile: [],
+    onMenuCommand: [],
+    onAutoLocked: [],
+  };
+  function listen(name, cb) {
+    if (!listeners[name]) listeners[name] = [];
+    listeners[name].push(cb);
+  }
 
   // Methods whose resolved value the renderer reads via result().
   var ENVELOPED = [
@@ -50,6 +59,10 @@
     "setTheme",
     "isOnboardingDone",
     "markOnboardingDone",
+    "getAppVersion",
+    "getCheckForUpdates",
+    "setCheckForUpdates",
+    "checkForUpdates",
   ];
 
   var defaults = {
@@ -172,10 +185,44 @@
       return Promise.resolve(null);
     },
 
-    onOpenVaultFile: function () {},
-    onMenuCommand: function () {},
+    getAppVersion: function () {
+      return Promise.resolve("1.0.0");
+    },
+    getCheckForUpdates: function () {
+      return Promise.resolve(true);
+    },
+    setCheckForUpdates: function () {
+      return Promise.resolve(null);
+    },
+    checkForUpdates: function () {
+      // Up-to-date by default: the stub cannot reach the network, so a stub
+      // claiming a newer version exists would leave a phantom badge visible in
+      // every NFR screenshot and a11y audit unless a test overrides it.
+      return Promise.resolve({
+        current: "1.0.0",
+        latest: "1.0.0",
+        isNew: false,
+        url: "https://github.com/luciVuc/shadow-bit/releases/latest",
+      });
+    },
+
+    // Listener methods: the renderer registers callbacks at load time, so the
+    // stub must capture them — otherwise a simulation/test cannot push a main
+    // process event (open vault file, menu command, update-available) after
+    // load. window.__sbStub.emit(name, payload) replays them.
+    onOpenVaultFile: function (cb) {
+      listen("onOpenVaultFile", cb);
+    },
+    onMenuCommand: function (cb) {
+      listen("onMenuCommand", cb);
+    },
     setOpenVaultCount: function () {},
-    onAutoLocked: function () {},
+    onAutoLocked: function (cb) {
+      listen("onAutoLocked", cb);
+    },
+    onUpdateAvailable: function (cb) {
+      listen("onUpdateAvailable", cb);
+    },
     noteActivity: function () {},
     pathForFile: function () {
       return "/tmp/dropped.txt";
@@ -183,6 +230,9 @@
 
     openPath: function () {
       return Promise.resolve(null);
+    },
+    openExternal: function () {
+      return Promise.resolve({ ok: true, value: null });
     },
     copy: function () {
       return Promise.resolve(null);
@@ -222,6 +272,18 @@
     reset: function () {
       overrides = {};
       calls.length = 0;
+    },
+    /** Replay a main→renderer push: emit("onUpdateAvailable", {...}). */
+    emit: function (name, payload) {
+      (listeners[name] || []).forEach(function (cb) {
+        // Matches the real preload's dispatch shapes: onMenuCommand unpacks
+        // {"cmd","arg"} into two arguments, the rest pass the payload as-is.
+        if (name === "onMenuCommand") {
+          cb(payload && payload.cmd, payload && payload.arg);
+        } else {
+          cb(payload);
+        }
+      });
     },
   };
   window.shadowbit = api;

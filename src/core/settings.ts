@@ -55,7 +55,10 @@ interface AppSettings {
   theme?: Theme;
   windowBounds?: WindowBounds;
   onboardingDone?: boolean;
+  checkForUpdates?: boolean; // default true
 }
+
+const DEFAULT_CHECK_FOR_UPDATES = true;
 
 function ensureConfigDir(): void {
   fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
@@ -223,6 +226,36 @@ export function setAutoLockMinutes(minutes: number): void {
   try {
     updateSettings((s) => {
       s.autoLockMinutes = n;
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Update checks
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the GUI should periodically poll GitHub for a newer release.
+ *
+ * Read-validated like every other setting: anything that is not an explicit
+ * `false` counts as enabled, so a corrupt value can never silently turn the
+ * check OFF — the failure mode is one extra network request, not a user living
+ * in the belief they will be told about an update.
+ */
+export function getCheckForUpdates(): boolean {
+  try {
+    return loadSettings().checkForUpdates !== false;
+  } catch {
+    return DEFAULT_CHECK_FOR_UPDATES;
+  }
+}
+
+export function setCheckForUpdates(value: boolean): void {
+  try {
+    updateSettings((s) => {
+      s.checkForUpdates = value === true;
     });
   } catch {
     /* best-effort */
