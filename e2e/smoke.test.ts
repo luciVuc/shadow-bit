@@ -1224,7 +1224,11 @@ describe("ShadowBit application menu", () => {
     );
     // Escape dismisses the dialog and focus handling does not lock up the page.
     await page.keyboard.press("Escape");
-    await page.waitForSelector("#about-modal.hidden", { timeout: UI_TIMEOUT });
+    // `.hidden` is display:none, so the default "visible" wait never resolves.
+    await page.waitForSelector("#about-modal.hidden", {
+      state: "attached",
+      timeout: UI_TIMEOUT,
+    });
   });
 
   test("update-available badge appears, opens the release page, clears", async () => {
@@ -1263,7 +1267,10 @@ describe("ShadowBit application menu", () => {
 
     // A null payload clears the badge (settings toggling the check off).
     await push(null);
-    await page.waitForSelector("#update-btn.hidden", { timeout: UI_TIMEOUT });
+    await page.waitForSelector("#update-btn.hidden", {
+      state: "attached",
+      timeout: UI_TIMEOUT,
+    });
   });
 
   test("settings modal toggles automatic update checks", async () => {
@@ -1283,6 +1290,7 @@ describe("ShadowBit application menu", () => {
     await page.uncheck("#update-check-toggle");
     await page.click("#settings-close");
     await page.waitForSelector("#settings-modal.hidden", {
+      state: "attached",
       timeout: UI_TIMEOUT,
     });
     assert.equal(
@@ -1303,6 +1311,7 @@ describe("ShadowBit application menu", () => {
     await page.check("#update-check-toggle");
     await page.click("#settings-close");
     await page.waitForSelector("#settings-modal.hidden", {
+      state: "attached",
       timeout: UI_TIMEOUT,
     });
     assert.equal(
