@@ -45,7 +45,7 @@ window.APP_DATA = {
     title: "ShadowBit",
     tagline: "One encrypted file. One password. No accounts, no cloud.",
     subTagline: "Lock a folder into a single .svlt file and send it anywhere.",
-    version: "1.1.6",
+    version: "1.0.0",
     // Owner is `luciVuc` — GitHub does NOT redirect on owner-name case, so the
     // lowercase spelling 404s. This was hand-transcribed from the author email
     // once and every download link on the site 404'd because of it.
@@ -226,7 +226,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "macOS — Apple Silicon",
-          file: "ShadowBit-1.1.6-arm64.dmg",
+          file: "ShadowBit-1.0.0-arm64.dmg",
           format: ".dmg",
           size: "~99 MB",
           primary: true,
@@ -234,7 +234,7 @@ window.APP_DATA = {
         },
         {
           label: "macOS — Intel",
-          file: "ShadowBit-1.1.6-x64.dmg",
+          file: "ShadowBit-1.0.0-x64.dmg",
           format: ".dmg",
           size: "~100 MB",
           arch: "Intel",
@@ -267,7 +267,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Windows 10 / 11",
-          file: "ShadowBit.Setup.1.1.6.exe",
+          file: "ShadowBit.Setup.1.0.0.exe",
           format: ".exe installer",
           size: "~98 MB",
           primary: true,
@@ -298,7 +298,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Linux — AppImage",
-          file: "ShadowBit-1.1.6.AppImage",
+          file: "ShadowBit-1.0.0.AppImage",
           format: ".AppImage",
           size: "~120 MB",
           primary: true,
@@ -306,7 +306,7 @@ window.APP_DATA = {
         },
         {
           label: "Linux — Debian / Ubuntu package",
-          file: "shadow-bit_1.1.6_amd64.deb",
+          file: "shadow-bit_1.0.0_amd64.deb",
           format: ".deb",
           size: "~95 MB",
           arch: "64-bit, Debian family",
