@@ -76,6 +76,38 @@ contributor documentation.
 
 Run via the launcher (`./shadow-bit`) or `node dist/cli/index.js`.
 
+## Use it from your AI agent
+
+ShadowBit ships with an **agent skill** (`skills/shadow-bit/`) that teaches AI
+coding assistants what ShadowBit is, every CLI command, and the safety rules
+for acting on your behalf: passwords are captured through the CLI's hidden
+prompts rather than flags, and destructive commands (`delete`, `shred`,
+`discard`) always stop for your confirmation.
+
+Install it with the standard skills CLI (it detects your installed agents
+and copies the skill to the right place; add `-g` for all projects):
+
+```bash
+npx skills add luciVuc/shadow-bit --skill shadow-bit
+```
+
+Or by hand — copy the folder into your agent's skills directory:
+
+```bash
+git clone https://github.com/luciVuc/shadow-bit.git
+mkdir -p ~/.claude/skills                                  # Claude Code
+cp -r shadow-bit/skills/shadow-bit ~/.claude/skills/
+
+cp -r shadow-bit/skills/shadow-bit ~/.config/opencode/skills/   # OpenCode (global)
+# or project-local: cp -r ... .opencode/skills/shadow-bit/
+```
+
+The skill only documents the product; your vaults stay local, and password
+prompts still appear in your terminal. An assistant that has the skill can
+answer questions about ShadowBit, run vault commands in your terminal, and
+walk you through recovery — but it never sees a password you typed at a
+prompt.
+
 ### Core workflow
 
 ```bash

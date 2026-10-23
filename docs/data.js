@@ -617,6 +617,18 @@ window.APP_DATA = {
             text: "Settings (the gear icon, or Ctrl/Cmd+,) offers Never, 5, 15, 30 or 60 minutes; 30 is the default. File ▸ Lock All Vaults does the same thing on demand, and greys out when nothing is open.",
           },
         },
+        {
+          q: "Can my AI assistant use ShadowBit for me?",
+          a: [
+            "Yes. ShadowBit ships with an agent skill — a documentation bundle that teaches AI coding assistants (Claude Code, Codex, OpenCode and similar tools) what ShadowBit is, every CLI command, and the safety rules for acting on your behalf: it will capture passwords through the CLI's hidden prompts instead of flags, and never run a destructive command without asking you first.",
+            "The skill is plain Markdown; installing it means copying one folder into your assistant's skills directory. Grab the skills/shadow-bit/ folder from the ShadowBit repository and place it where your agent looks for skills.",
+          ],
+          code: '# easiest — detects your agents and installs to the right place\nnpx skills add luciVuc/shadow-bit --skill shadow-bit   # (add -g for all projects)\n\n# or by hand — copy the folder to your agent\'s skills directory\ngit clone https://github.com/luciVuc/shadow-bit.git\nmkdir -p ~/.claude/skills ~/.config/opencode/skills\ncp -r shadow-bit/skills/shadow-bit ~/.claude/skills/          # Claude Code\ncp -r shadow-bit/skills/shadow-bit ~/.config/opencode/skills/ # OpenCode\n\n# then ask your assistant: "what can you do with shadow-bit?" to verify',
+          note: {
+            tone: "info",
+            text: "Your vaults stay local regardless. The skill only teaches the assistant to drive the shadow-bit CLI you already have installed, and password prompts still appear in your terminal — the assistant never reads a password it did not type for you.",
+          },
+        },
       ],
     },
     {

@@ -21,9 +21,10 @@
 4. [GUI quick start](#gui-quick-start)
 5. [CLI quick start](#cli-quick-start)
 6. [Common recipes](#common-recipes)
-7. [Advanced security features](#advanced-security-features)
-8. [All CLI commands](#all-cli-commands)
-9. [Security reference](#security-reference)
+7. [Use from your AI agent](#use-from-your-ai-agent)
+8. [Advanced security features](#advanced-security-features)
+9. [All CLI commands](#all-cli-commands)
+10. [Security reference](#security-reference)
 
 ---
 
@@ -445,6 +446,65 @@ up the orphaned session:
 shadow-bit clean
 # ✓ Cleaned 1 stale session(s).
 ```
+
+---
+
+## Use from your AI agent
+
+ShadowBit ships with an **agent skill** — a documentation bundle that teaches
+AI coding assistants (Claude Code, OpenCode, Codex and similar tools) what
+ShadowBit is, every CLI command with its flags, and the safety rules for
+acting on your behalf. An assistant that has it can answer questions about
+ShadowBit, create and open vaults in your terminal, troubleshoot errors, and
+walk you through password recovery.
+
+The safety rules matter: the assistant is taught to let the CLI's hidden
+prompts capture passwords (never `--password` on the command line), and to
+stop for your explicit confirmation before `delete`, `shred` or `discard`.
+
+### Install the skill
+
+The fastest way is the standard skills CLI — it detects your installed
+agents and installs to the right directory (add `-g` to make it available
+across all projects):
+
+```bash
+npx skills add luciVuc/shadow-bit --skill shadow-bit
+```
+
+Prefer to do it by hand? The skill is one folder whose entry point is
+`SKILL.md` plus three `reference/*.md` files. Copy it into whichever
+directory your assistant loads skills from:
+
+```bash
+# one-time: fetch the repo
+git clone https://github.com/luciVuc/shadow-bit.git
+cd shadow-bit
+
+# Claude Code — global
+mkdir -p ~/.claude/skills
+cp -r skills/shadow-bit ~/.claude/skills/
+
+# OpenCode — global (applies to every project)
+mkdir -p ~/.config/opencode/skills
+cp -r skills/shadow-bit ~/.config/opencode/skills/
+
+# OpenCode — project-local (this project only)
+mkdir -p .opencode/skills
+cp -r skills/shadow-bit .opencode/skills/
+```
+
+Other tools follow the same pattern — place the folder in the skills
+directory your tool documents (and configure your tool's `skills` search
+paths if it needs one).
+
+To verify, start a session and ask: _"what can you do with shadow-bit?"_ —
+the assistant should describe creating, opening, closing and recovering
+vaults without any further prompting.
+
+Your vaults stay local either way. The skill only documents the product;
+password prompts still appear in your terminal, and the assistant never
+reads a password it did not watch you use.
 
 ---
 

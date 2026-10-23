@@ -32,7 +32,7 @@ npx --yes serve -l 9090 docs/
 | **How It Works**  | 4-step workflow cards (Create → Open → Edit → Close) with inline CLI examples                                                                        |
 | **Download**      | Version chips (every published release), platform tabs (macOS / Windows / Linux) with real download buttons, numbered install steps, release history |
 | **Recipes**       | 4 copy-ready shell recipes (share, recover, automate, migrate)                                                                                       |
-| **Q&A**           | 30 questions in 4 categories (Getting started, How-to recipes, Privacy & limits, Troubleshooting) with live search and category filter               |
+| **Q&A**           | 32 questions in 4 categories (Getting started, How-to recipes, Privacy & limits, Troubleshooting) with live search and category filter               |
 | **CLI Reference** | All 14 commands with flags, descriptions, and example snippets; live search filter                                                                   |
 | **Desktop GUI**   | 4-tab GUI mock (Open / Create / Manage / Open Vaults) with decorative form previews                                                                  |
 | **Security**      | 13 security property cards + audit-status callout + best-effort erase notice                                                                         |
