@@ -481,8 +481,9 @@ async function askConfirm(opts) {
 //
 // The main process checks GitHub Releases (scheduled, or on demand from the
 // About dialog) and pushes the outcome here. The badge is a real <button> that
-// opens the download page in the default browser, so the notification carries
-// its own action rather than depending on the user finding the About dialog.
+// opens the download page in an app-owned browser window (see openInApp), so
+// the notification carries its own action rather than depending on the user
+// finding the About dialog.
 let updateAvailableInfo = null;
 
 function showUpdateBadge(info) {
@@ -502,8 +503,10 @@ api.onUpdateAvailable((info) => showUpdateBadge(info));
 $("update-btn").onclick = async () => {
   const url = updateAvailableInfo && updateAvailableInfo.url;
   if (!url) return;
-  const res = await api.openExternal(url);
-  if (res && res.ok === false) err(res.error || "Could not open the browser.");
+  // App-owned window rather than the user's browser: same allowlist in
+  // main.ts, but "a new version is here" stays inside the app.
+  const res = await api.openInApp(url);
+  if (res && res.ok === false) err(res.error || "Could not open the page.");
 };
 
 // ---------------------------------------------------------------------------
@@ -556,7 +559,7 @@ function aboutUpdateStatus(info) {
     if (info.latest) updateAvailableInfo = { latest: info.latest, url: info.url || (updateAvailableInfo && updateAvailableInfo.url) };
     out.textContent =
       `Version ${info.latest} is available — click "Download Latest" to open ` +
-      `the releases page in your web browser.`;
+      `the releases page in an app window.`;
     if (updateAvailableInfo?.url) downloadBtn.hidden = false;
     showUpdateBadge(updateAvailableInfo);
   } else {
@@ -583,8 +586,8 @@ $("about-check-updates").onclick = async () => {
 $("about-download").onclick = async () => {
   const url = updateAvailableInfo && updateAvailableInfo.url;
   if (!url) return;
-  const res = await api.openExternal(url);
-  if (res && res.ok === false) err(res.error || "Could not open the browser.");
+  const res = await api.openInApp(url);
+  if (res && res.ok === false) err(res.error || "Could not open the page.");
 };
 
 $("about-close").onclick = () => closeModal("about-modal");

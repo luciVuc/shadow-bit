@@ -102,8 +102,12 @@ const api = {
   // system
   openPath: (p: string) => ipcRenderer.invoke("sys:openPath", p),
   // openExternal: shell.openExternal behind a host allowlist in main.ts. The
-  // update badge and the About dialog are the only callers.
+  // update badge and the About dialog used to be the only callers; they now
+  // use openInApp instead, and openExternal remains for the plain shell path.
   openExternal: (url: string) => ipcRenderer.invoke("sys:openExternal", url),
+  // openInApp: opens an allowlisted https URL in the app's own browser-style
+  // BrowserWindow (same allowlist as openExternal, no preload inside).
+  openInApp: (url: string) => ipcRenderer.invoke("sys:openInApp", url),
   copy: (text: string) => ipcRenderer.invoke("sys:copy", text),
   // copySecret: copies to clipboard and auto-clears after 30 s. Prefer this
   // over `copy` for anything sensitive — `copy` has no timer, so a secret

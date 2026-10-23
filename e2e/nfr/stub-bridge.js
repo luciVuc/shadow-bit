@@ -234,6 +234,9 @@
     openExternal: function () {
       return Promise.resolve({ ok: true, value: null });
     },
+    openInApp: function () {
+      return Promise.resolve({ ok: true, value: null });
+    },
     copy: function () {
       return Promise.resolve(null);
     },

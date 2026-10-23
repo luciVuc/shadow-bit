@@ -780,6 +780,97 @@ function openDocsWindow(anchor?: string): void {
   });
 }
 
+/**
+ * The app-owned variant of sys:openExternal, for URLs the renderer passes.
+ *
+ * The update badge and the About dialog's "Download Latest" used to shell out
+ * to the user's browser; they now open in the same kind of window the Help
+ * menu's Documentation items use, so "ShadowBit is showing me a release" is
+ * one visual story instead of two. The URL rules are the same as
+ * sys:openExternal's — https on an app-allowlisted host — because the renderer
+ * is the caller and renderer compromise is within this app's stated threat
+ * model. Navigation inside the window stays pinned to the allowlist, so the
+ * release page's GitHub-internal links work but a link pointing off-site
+ * cannot replace the window's content while it still says ShadowBit.
+ * Asset downloads on the release page are plain navigations and load here
+ * too. One window only, for the same reason as the docs window.
+ */
+let externalWindow: BrowserWindow | null = null;
+
+function openExternalInApp(
+  url: string,
+): { ok: true; value: string } | { ok: false; error: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { ok: false, error: "Not a valid URL." };
+  }
+  if (
+    parsed.protocol !== "https:" ||
+    !ALLOWED_EXTERNAL_HOSTS.has(parsed.hostname)
+  ) {
+    return { ok: false, error: `Refusing to open ${parsed.hostname}.` };
+  }
+  if (IS_E2E) {
+    const opened = (globalThis as any).__shadowbitOpenUrls ?? [];
+    opened.push(parsed.toString());
+    (globalThis as any).__shadowbitOpenUrls = opened;
+    return { ok: true, value: parsed.toString() };
+  }
+  const target = parsed.toString();
+  if (externalWindow && !externalWindow.isDestroyed()) {
+    if (externalWindow.isMinimized()) externalWindow.restore();
+    externalWindow.loadURL(target).catch(() => {
+      /* already-loaded page stays up on failure */
+    });
+    externalWindow.show();
+    externalWindow.focus();
+    return { ok: true, value: target };
+  }
+  externalWindow = new BrowserWindow({
+    width: 1080,
+    height: 760,
+    minWidth: 720,
+    minHeight: 560,
+    icon: iconPath(),
+    autoHideMenuBar: false,
+    webPreferences: {
+      // Same posture as the docs window: remote, untrusted content gets no
+      // preload and no Node access.
+      preload: undefined,
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      spellcheck: false,
+    },
+  });
+  const wc = externalWindow.webContents;
+  wc.setWindowOpenHandler(() => ({ action: "deny" }));
+  wc.on("will-navigate", (event, navUrl) => {
+    let nav: URL;
+    try {
+      nav = new URL(navUrl);
+    } catch {
+      event.preventDefault();
+      return;
+    }
+    if (
+      nav.protocol !== "https:" ||
+      !ALLOWED_EXTERNAL_HOSTS.has(nav.hostname)
+    ) {
+      event.preventDefault();
+    }
+  });
+  externalWindow.on("closed", () => {
+    externalWindow = null;
+  });
+  externalWindow.loadURL(target).catch(() => {
+    /* network failure renders as an interstitial */
+  });
+  return { ok: true, value: target };
+}
+
 // ---------------------------------------------------------------------------
 // Helper: wrap a result/error envelope for IPC handlers
 // ---------------------------------------------------------------------------
@@ -1230,6 +1321,12 @@ handle("sys:openExternal", async (_e, url: string) => {
   }
   await shell.openExternal(parsed.toString());
   return { ok: true, value: parsed.toString() };
+});
+
+// App-owned window instead of the user's browser (see openExternalInApp).
+// Same allowlist, same E2E recording; only the destination differs.
+handle("sys:openInApp", async (_e, url: string) => {
+  return openExternalInApp(url);
 });
 
 // ---------------------------------------------------------------------------
