@@ -89,6 +89,62 @@
   box-sizing: border-box;
 }
 
+/* ── Scrollbars ─────────────────────────────────────────────────────── */
+/* The stock Chromium scrollbar is a chunky grey slab with square corners that
+   clashes with the dark palette on every panel that scrolls (file lists, log
+   panes, modals). This gives every scrollable surface the overlay-style bar
+   mobile has: thin, rounded, and coloured from the same tokens as the
+   borders, with a hover state for findability.
+
+   It styles only *appearance* — hit-testing and the wheel/keyboard/drag
+   interactions are still native Chromium behaviour, so scrolling itself is
+   unchanged. `.tabs` keeps its own scrollbar-hiding rules further down:
+   there the horizontal strip is expected to pan, and a bar under the tab row
+   reads as menu chrome rather than scrollable content.
+
+   The light-theme handle uses a near-transparent dark tint rather than
+   var(--border) directly: --border is too opaque in light mode, where a
+   scroll affordance should sit above the content but below the user's
+   attention. Firefox is covered by scrollbar-width/color; Chromium (the only
+   engine here) by the ::-webkit-* rules. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 161, 179, 0.35) transparent;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 161, 179, 0.35) transparent;
+}
+/* Mirror the token overrides above: light can be an explicit preference
+   ([data-theme="light"]) or the system default when no override is set. */
+[data-theme="light"] * {
+  scrollbar-color: rgba(26, 29, 38, 0.28) transparent;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) * {
+    scrollbar-color: rgba(26, 29, 38, 0.28) transparent;
+  }
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 body {
   margin: 0;
   font-family:
