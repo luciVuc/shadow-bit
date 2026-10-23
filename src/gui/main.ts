@@ -481,7 +481,26 @@ function rebuildAppMenu(): void {
       // The About dialog hosts the "Check for Updates" button, so the Help
       // menu is where its manual entry point lives on Windows and Linux.
       label: "Help",
-      submenu: [{ label: "About ShadowBit", click: () => command("about") }],
+      submenu: [
+        {
+          label: "Documentation",
+          submenu: [
+            {
+              label: "Open Documentation",
+              click: () => openDocsWindow(),
+            },
+            {
+              label: "CLI Command Reference",
+              click: () => openDocsWindow("cli"),
+            },
+            {
+              label: "Security Properties",
+              click: () => openDocsWindow("security"),
+            },
+          ],
+        },
+        { label: "About ShadowBit", click: () => command("about") },
+      ],
     },
   );
 
@@ -686,6 +705,80 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+
+// ---------------------------------------------------------------------------
+// Documentation window
+// ---------------------------------------------------------------------------
+// Help > Documentation opens the docs site inside an app-owned BrowserWindow
+// rather than the user's browser: it keeps the association with the app, keeps
+// the site reachable offline-hosting-style one keystroke away, and does not
+// fork off a second window-management story in the OS. One window only — a
+// second Help click focuses the existing one and navigates it, so the taskbar
+// does not accumulate doc windows after browsing a few sections.
+//
+// The window carries no preload and no Node access: it renders remote web
+// content, and everything that rulebook protects lives in the main renderer's
+// preload bridge. Navigation is pinned to the app's own origin so a stray
+// link cannot turn the Help window into an arbitrary-site browser framed as
+// ShadowBit. Under E2E the target is recorded (same pattern as
+// sys:openExternal) so smoke tests can assert the menu without network.
+const DOCS_URL = "https://shadowbit.app";
+
+let docsWindow: BrowserWindow | null = null;
+
+function openDocsWindow(anchor?: string): void {
+  const target = anchor ? `${DOCS_URL}/#${anchor}` : `${DOCS_URL}/`;
+  if (IS_E2E) {
+    const opened = (globalThis as any).__shadowbitOpenUrls ?? [];
+    opened.push(target);
+    (globalThis as any).__shadowbitOpenUrls = opened;
+    return;
+  }
+  if (docsWindow && !docsWindow.isDestroyed()) {
+    if (docsWindow.isMinimized()) docsWindow.restore();
+    docsWindow.loadURL(target).catch(() => {
+      /* offline: the already-loaded page stays up */
+    });
+    docsWindow.show();
+    docsWindow.focus();
+    return;
+  }
+  docsWindow = new BrowserWindow({
+    width: 1080,
+    height: 760,
+    minWidth: 720,
+    minHeight: 560,
+    title: "ShadowBit Documentation",
+    icon: iconPath(),
+    autoHideMenuBar: false,
+    webPreferences: {
+      // Remote content only: no preload, so there is no window.shadowbit
+      // bridge to reach from the docs page.
+      preload: undefined,
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      spellcheck: false,
+    },
+  });
+  docsWindow.setMenuBarVisibility(true);
+  const wc = docsWindow.webContents;
+  wc.setWindowOpenHandler(() => ({ action: "deny" }));
+  wc.on("will-navigate", (event, url) => {
+    // In-page anchors resolve to docs pages; anything else (external links,
+    // DNS-error interstitials, injected scheme tricks) hard-blocks. The docs
+    // site is self-contained, so its own links stay in-origin.
+    if (new URL(url).origin !== new URL(DOCS_URL).origin)
+      event.preventDefault();
+  });
+  docsWindow.on("closed", () => {
+    docsWindow = null;
+  });
+  docsWindow.loadURL(target).catch(() => {
+    // loadURL rejects on network failure (e.g. offline); the error text
+    // renders as an interstitial, which is more honest than a dead window.
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Helper: wrap a result/error envelope for IPC handlers

@@ -1231,6 +1231,46 @@ describe("ShadowBit application menu", () => {
     });
   });
 
+  test("Help > Documentation requests the docs site (recorded under E2E)", async () => {
+    await click("Help", "Documentation", "Open Documentation");
+    const opened = (await app.evaluate(() => {
+      (globalThis as any).__shadowbitOpenUrls ??= [];
+      return (globalThis as any).__shadowbitOpenUrls;
+    })) as string[];
+    assert.ok(
+      opened.some((u) => u.startsWith("https://shadowbit.app/")),
+      `Documentation must request the docs site, got ${JSON.stringify(opened)}`,
+    );
+
+    // An anchored entry pushes its target too, so the site opens at the
+    // section rather than the top of the page.
+    await click("Help", "Documentation", "CLI Command Reference");
+    const openedAgain = (await app.evaluate(() => {
+      (globalThis as any).__shadowbitOpenUrls ??= [];
+      return (globalThis as any).__shadowbitOpenUrls;
+    })) as string[];
+    assert.ok(
+      openedAgain.some((u) => u.includes("#cli")),
+      `CLI entry must request the anchored docs URL, got ${JSON.stringify(openedAgain)}`,
+    );
+  });
+
+  test("Help > Documentation menu exposes the three entry points", async () => {
+    const docSub = await at("Help", "Documentation");
+    assert.ok(docSub, "Help > Documentation submenu must exist");
+    const labels = docSub.childLabels;
+    for (const want of [
+      "Open Documentation",
+      "CLI Command Reference",
+      "Security Properties",
+    ]) {
+      assert.ok(
+        labels.includes(want),
+        `Documentation submenu should contain "${want}", got ${JSON.stringify(labels)}`,
+      );
+    }
+  });
+
   test("update-available badge appears, opens the release page, clears", async () => {
     const push = (info: unknown) =>
       app.evaluate(({ BrowserWindow }: typeof import("electron"), payload) => {
