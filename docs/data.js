@@ -343,6 +343,54 @@ window.APP_DATA = {
     note: "Every command that needs a password prompts for it invisibly. Nothing is stored in your shell history. Every command example on this site assumes this global install — the command is shadow-bit, on your PATH, not a script in a project folder.",
   },
 
+  // ─── Agent skill ────────────────────────────────────────────────────────
+  // Documents the installable agent skill (skills/shadow-bit/ in the repo).
+  // Content accuracy rules in docs/README.md apply here doubly: every
+  // install path below was exercised, not assumed. Do not describe the skill
+  // as giving an agent vault access beyond what the CLI already grants — the
+  // skill is documentation, not a new API surface.
+  agentSkill: {
+    intro: [
+      "ShadowBit ships with an installable skill that teaches AI coding assistants what ShadowBit is, every CLI command with its flags, and how to use the app on your behalf from your terminal — create and open vaults, walk through recovery, and explain errors without a doc search.",
+      "The skill is plain Markdown that your agent reads on demand. Install it with one command; it lands in your agent's skills directory and everything in it stays on your machine.",
+    ],
+    installTitle: "One-command install",
+    installCode: "npx skills add luciVuc/shadow-bit --skill shadow-bit",
+    installNote:
+      " Run it once from any project — the skills CLI detects your installed agents and offers to install to each. Add -g to make the skill available across every project at once.",
+    cards: [
+      {
+        icon: "🔍",
+        title: "Answers, not guesswork",
+        desc: "Why .svlt and not .vault, what the container format version means, why an 'incorrect password' error cannot tell you which — the skill carries the full product knowledge so your agent stops improvising.",
+      },
+      {
+        icon: "⌨️",
+        title: "Drives the CLI correctly",
+        desc: "Every command and flag, verified against the build: keyfile vaults need --keyfile on every authenticated command, sessions persist across runs, and 'vault is not open' means check the session list first.",
+      },
+      {
+        icon: "🛡️",
+        title: "Safety rules built in",
+        desc: "Passwords are captured by the CLI's hidden prompts, never as command flags. Destructive commands — delete, shred, discard — require your explicit go-ahead first, every time.",
+      },
+      {
+        icon: "🔒",
+        title: "Documentation only, all local",
+        desc: "The skill is a folder of Markdown files your agent loads on demand. It grants no vault access of its own; it just teaches the agent to use the same CLI you already have.",
+      },
+    ],
+    manualTitle: "Prefer to install by hand?",
+    manualInstallCode:
+      "# 1. Download the repository from GitHub (Code ▸ Download ZIP)\n#    or any way you like, and unpack it.\ncd shadow-bit-master\n\n# 2. Copy the skill folder to your agent's skills directory.\n#    Claude Code (global):\nmkdir -p ~/.claude/skills\ncp -r skills/shadow-bit ~/.claude/skills/\n\n#    OpenCode — global (or project-local .opencode/skills/):\nmkdir -p ~/.config/opencode/skills\ncp -r skills/shadow-bit ~/.config/opencode/skills/",
+    manualNote:
+      "Any agent that discovers skills works the same way: the skill is one folder whose entry point is SKILL.md plus three reference files — place it where your tool documents its skills directory.",
+    verifyCode:
+      'shadow-bit --version   # make sure the CLI is on the PATH\n# then, in your agent: "what can you do with shadow-bit?"\n# it should describe create, open, close and recover unprompted.',
+    verifyNote:
+      "Your vaults stay local either way: the skill only documents the CLI, password prompts still appear in your terminal, and the agent never reads a password it did not watch you type.",
+  },
+
   // ─── CLI command reference ────────────────────────────────────────────
   commands: [
     {
@@ -620,7 +668,7 @@ window.APP_DATA = {
         {
           q: "Can my AI assistant use ShadowBit for me?",
           a: [
-            "Yes. ShadowBit ships with an agent skill — a documentation bundle that teaches AI coding assistants (Claude Code, Codex, OpenCode and similar tools) what ShadowBit is, every CLI command, and the safety rules for acting on your behalf: it will capture passwords through the CLI's hidden prompts instead of flags, and never run a destructive command without asking you first.",
+            "Yes — that is what the Agent section above documents: an installable skill that teaches AI coding assistants (Claude Code, Codex, OpenCode and similar tools) what ShadowBit is, every CLI command, and the safety rules for acting on your behalf: it will capture passwords through the CLI's hidden prompts instead of flags, and never run a destructive command without asking you first.",
             "The skill is plain Markdown; installing it means copying one folder into your assistant's skills directory. Grab the skills/shadow-bit/ folder from the ShadowBit repository and place it where your agent looks for skills.",
           ],
           code: '# easiest — detects your agents and installs to the right place\nnpx skills add luciVuc/shadow-bit --skill shadow-bit   # (add -g for all projects)\n\n# or by hand — copy the folder to your agent\'s skills directory\ngit clone https://github.com/luciVuc/shadow-bit.git\nmkdir -p ~/.claude/skills ~/.config/opencode/skills\ncp -r shadow-bit/skills/shadow-bit ~/.claude/skills/          # Claude Code\ncp -r shadow-bit/skills/shadow-bit ~/.config/opencode/skills/ # OpenCode\n\n# then ask your assistant: "what can you do with shadow-bit?" to verify',

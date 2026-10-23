@@ -106,6 +106,7 @@ class App {
     this.renderFaq();
     this.renderCli();
     this.renderGui();
+    this.renderAgentSkill();
     this.renderSecurity();
     this.renderFooter();
     this.bindEvents();
@@ -135,6 +136,11 @@ class App {
     this.el.cliTable = document.getElementById("cli-table");
     this.el.guiTabBar = document.getElementById("gui-tab-bar");
     this.el.guiContent = document.getElementById("gui-content");
+    this.el.agentIntro = document.getElementById("agent-intro");
+    this.el.agentCards = document.getElementById("agent-cards");
+    this.el.agentInstall = document.getElementById("agent-install");
+    this.el.agentManual = document.getElementById("agent-manual");
+    this.el.agentVerify = document.getElementById("agent-verify");
     this.el.securityGrid = document.getElementById("security-grid");
     this.el.footerMeta = document.getElementById("footer-meta");
   }
@@ -954,6 +960,88 @@ class App {
     });
     this.el.guiContent.querySelectorAll(".gui-panel").forEach((p) => {
       p.classList.toggle("active", p.dataset.panel === id);
+    });
+  }
+
+  // ─── Agent skill ─────────────────────────────────────────────────────
+  /** Render the installable agent-skill section (install, cards, manual, verify). */
+  renderAgentSkill() {
+    const d = this.data.agentSkill;
+    if (!d) return;
+
+    // Intro paragraphs.
+    const intro = document.createDocumentFragment();
+    d.intro.forEach((tx) => {
+      const p = document.createElement("p");
+      p.className = "text-sb-muted text-lg mb-6 max-w-2xl";
+      p.textContent = tx;
+      intro.append(p);
+    });
+    this.el.agentIntro.replaceChildren(intro);
+
+    // Cards: the shared feature-card shape, revealed like every other grid.
+    const frag = document.createDocumentFragment();
+    d.cards.forEach((card, i) => {
+      const el = cloneTemplate("feature-card-tpl");
+      el.querySelector('[data-field="icon"]').textContent = card.icon;
+      el.querySelector('[data-field="title"]').textContent = card.title;
+      el.querySelector('[data-field="desc"]').textContent = card.desc;
+      el.classList.add("reveal", `reveal-delay-${Math.min(i + 1, 4)}`);
+      frag.append(el);
+    });
+    this.el.agentCards.replaceChildren(frag);
+
+    // Info blocks share one builder: heading, optional preface, code block
+    // with a copy button, and note. Same skeleton renderCliInstall uses.
+    const block = (node, spec) => {
+      const box = document.createElement("div");
+      box.className = "cli-install-inner";
+      const heading = document.createElement("div");
+      heading.className = "install-panel-heading";
+      heading.textContent = spec.title;
+      box.append(heading);
+      if (spec.desc) {
+        const desc = document.createElement("p");
+        desc.className = "cli-install-desc";
+        desc.textContent = spec.desc;
+        box.append(desc);
+      }
+      const wrap = document.createElement("div");
+      wrap.className = "install-step-code-wrapper";
+      const btn = cloneTemplate("copy-btn-tpl");
+      btn.setAttribute("aria-label", `Copy ${spec.title} command`);
+      btn.addEventListener("click", () => copyCode(btn, spec.code));
+      const pre = document.createElement("pre");
+      pre.className = "install-code";
+      const code = document.createElement("code");
+      code.textContent = spec.code;
+      pre.append(code);
+      wrap.append(btn, pre);
+      box.append(wrap);
+      if (spec.note) {
+        const note = document.createElement("div");
+        note.className = "install-note";
+        note.textContent = spec.note;
+        box.append(note);
+      }
+      node.replaceChildren(box);
+    };
+
+    block(this.el.agentInstall, {
+      title: d.installTitle,
+      code: d.installCode,
+      note: d.installNote,
+    });
+    block(this.el.agentManual, {
+      title: d.manualTitle,
+      code: d.manualInstallCode,
+      note: d.manualNote,
+    });
+    block(this.el.agentVerify, {
+      title: "Verify it loaded",
+      desc: null,
+      code: d.verifyCode,
+      note: d.verifyNote,
     });
   }
 
