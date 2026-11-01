@@ -347,7 +347,8 @@ shadow-bit info project
 ```
 
 Note the `Version: 3` above: that is the **container format** version, not the app
-version (`shadow-bit --version`, currently 1.0.0). They are unrelated numbers.
+version (`shadow-bit --version`, currently 1.0.1 — read at runtime from
+`package.json`, so it stays in step automatically). They are unrelated numbers.
 
 On a `--paranoid` vault the two timestamps read `1970-01-01T00:00:00.000Z`
 instead — that is what the mode does, and it is also how a paranoid vault is

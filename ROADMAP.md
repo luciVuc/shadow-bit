@@ -1,7 +1,7 @@
 # ShadowBit — Project Roadmap
 
-> Last updated: 2026-09-16 — comprehensive analysis, bug fixes, security hardening, UX overhaul, monetization  
-> App version: **1.0.0** (`package.json`) · container format: **v3** (`CURRENT_VERSION`)  
+> Last updated: 2026-11-01 — comprehensive analysis, bug fixes, security hardening, UX overhaul, monetization  
+> App version: **1.0.1** (`package.json`) · container format: **v3** (`CURRENT_VERSION`)  
 > These are unrelated numbers; both appear as "Version" in `vault info` vs `--version`.  
 > Stack: TypeScript · Node.js · Electron 44 · AES-256-GCM / ChaCha20-Poly1305  
 > See also: `ANALYSIS_REPORT.md` (full audit), `SECURITY_AUDIT.md` (crypto audit)
@@ -26,7 +26,7 @@ Verified actual state as of the last commit:
 | 16 — CLI enhancements            | ❌ not started            | **Shipped.** `SHADOWBIT_PASSWORD` env var, `picocolors` output, `clean` command for orphan sessions.                                                                                                                                                                                                                                                                                          |
 | 17 — advanced vault features     | ❌ not started            | **Partially shipped.** Payload compression and plaintext metadata **are** shipped. Streaming encryption and multi-user key slots are **not**.                                                                                                                                                                                                                                                 |
 | 18 — distribution                | ❌ not started            | **Partially shipped.** `.github/workflows/release.yml` builds mac/win/linux and publishes a draft release. Code signing is **not** configured (secrets commented out).                                                                                                                                                                                                                        |
-| 19 — extended testing            | ❌ not started            | **Largely shipped.** 232 tests: 99 core+CLI-unit, 36 CLI E2E (real subprocess), 26 GUI (Electron), 71 NFR (WCAG 2.2 AA, responsive XS–XL, perf, docs-site self-containment) — all in CI via `npm run verify`. Concurrency covered for the session registry and the local machine key. Large-vault (>1.5 GiB) coverage is **not** covered.                                                     |
+| 19 — extended testing            | ❌ not started            | **Largely shipped.** **246 tests**: 101 core+CLI-unit, 36 CLI E2E (real subprocess), 31 GUI (Electron), 81 NFR (WCAG 2.2 AA, responsive XS–XL, perf, docs-site self-containment) — all in CI via `npm run verify`. Concurrency covered for the session registry and the local machine key. Large-vault (>1.5 GiB) coverage is **not** covered.                                                |
 | 20 — docs & monetization         | ❌ not started            | **Partially shipped.** `docs/` marketing site exists. Monetization (licensing, pricing) is **not** started.                                                                                                                                                                                                                                                                                   |
 | 21 — adversarial hardening       | ❌ _(summary table only)_ | **Shipped (7/7)** — the section below marks it complete; the summary table is stale.                                                                                                                                                                                                                                                                                                          |
 | 22 — competitive gap closing     | _(absent)_                | **Partially shipped (2/4).** Keyfiles and ChaCha20-Poly1305 are shipped and tested end to end. Indexing suppression is implemented and wired (`suppressIndexing`, called on the plaintext dir in `makeWorkingDir` in `sessions.ts`) but is best-effort and platform-dependent. **Hidden volumes and duress are NOT shipped** — `src/core/hidden.ts` has library tests but no CLI or GUI path. |
@@ -211,7 +211,7 @@ current surface, run `shadow-bit --help` or read `QUICKSTART.md`.
 
 ---
 
-## Phase 6 — Testing ✅ (232 tests across 7 runners)
+## Phase 6 — Testing ✅ (249 tests across 7 runners)
 
 - `src/test/core.test.ts` — security-focused core tests ✅ (89)
 - `src/test/cli.test.ts` — CLI integration tests ✅ (10)

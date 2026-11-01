@@ -832,7 +832,7 @@ window.APP_DATA = {
         {
           q: "Has ShadowBit been independently audited?",
           a: [
-            "No. It has been through an internal code review whose findings were fixed and covered by regression tests — 232 automated tests across crypto round-trips, the real CLI as a subprocess, the real desktop app, WCAG 2.2 AA accessibility, responsive reflow and performance budgets. Nobody outside the project has assessed it.",
+            "No. It has been through an internal code review whose findings were fixed and covered by regression tests — 249 automated tests across crypto round-trips, the real CLI as a subprocess, the real desktop app, WCAG 2.2 AA accessibility, responsive reflow and performance budgets. Nobody outside the project has assessed it.",
             "SECURITY.md documents the threat model, including what is explicitly out of scope. For classified or life-critical data, choose a tool with outside scrutiny.",
           ],
         },
@@ -1055,11 +1055,11 @@ window.APP_DATA = {
     },
     {
       path: "src/test/ + e2e/",
-      desc: "Test suite — 232 tests across 7 runners (node:test + Playwright)",
+      desc: "Test suite — 249 tests across 7 runners (node:test + Playwright)",
       files: [
         {
           name: "src/test/core.test.ts",
-          desc: "89 tests: cryptographic round-trips, error cases, paranoid mode, the full keyfile lifecycle, cipher agility, timestamp scrubbing, local-key and session-lock races",
+          desc: "91 tests: cryptographic round-trips, error cases, paranoid mode, the full keyfile lifecycle, cipher agility, timestamp scrubbing, local-key and session-lock races",
         },
         {
           name: "src/test/cli.test.ts",
@@ -1071,11 +1071,11 @@ window.APP_DATA = {
         },
         {
           name: "e2e/smoke.test.ts",
-          desc: "26 tests: the real Electron app — tab flows, metadata, settings, dialogs and window sizing",
+          desc: "31 tests: the real Electron app — tab flows, metadata, settings, dialogs and window sizing",
         },
         {
           name: "e2e/nfr.*.test.ts",
-          desc: "71 tests: WCAG 2.2 AA, XS-XL responsive reflow, asset/interaction budgets against the real renderer, and docs-site self-containment plus Q&A accuracy",
+          desc: "88 tests: WCAG 2.2 AA, XS-XL responsive reflow, asset/interaction budgets against the real renderer, and docs-site self-containment plus Q&A accuracy",
         },
       ],
     },

@@ -602,7 +602,7 @@ independent audit. See [SECURITY.md](SECURITY.md) for the full threat model.
 ```bash
 npm run verify  # everything below — use this before shipping
 
-npm test               # 99 unit/integration tests: crypto, round-trips, edge cases
+npm test               # 101 unit/integration tests: crypto, round-trips, edge cases
 npm run test:cli-e2e   # 36 real-subprocess CLI tests: every command, flag and error path
 npm run test:gui       # 26 Electron + Playwright GUI tests (needs a display)
 npm run test:nfr       # 71 non-functional tests in headless Chromium

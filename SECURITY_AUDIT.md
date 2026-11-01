@@ -11,7 +11,7 @@
 > including the keyfile-forwarding bug (`63a3087`, which made a keyfile vault
 > impossible to delete or re-password) and the local machine key race
 > (`8359fc6`, where a peer could end up with key material that decrypts
-> nothing). Current suite: **232 tests** — 99 core+CLI-unit, 36 CLI E2E, 26 GUI, 71 NFR.
+> nothing). Current suite: **249 tests** — 101 core+CLI-unit, 36 CLI E2E, 31 GUI, 81 NFR.
 > The ✅/❌ markers below are frozen at the time of the review; read
 > `SECURITY.md` for the current threat model and `ROADMAP.md` for real status.
 

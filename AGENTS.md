@@ -22,15 +22,15 @@ npm run gui:dev        # launch Electron without rebuilding
 ## Tests
 
 ```bash
-npm test              # node:test suite in src/test/ (security + round-trip) — 99 tests
+npm test              # node:test suite in src/test/ (security + round-trip) — 101 tests
 npm run test:cli-e2e  # real-subprocess CLI coverage (e2e/cli.test.ts) — 36 tests
-npm run test:gui      # Electron + Playwright GUI tests (e2e/smoke.test.ts) — 26 tests
+npm run test:gui      # Electron + Playwright GUI tests (e2e/smoke.test.ts) — 31 tests
 npm run test:gui:headless  # same suite, forced virtual display (Xvfb)
 npm run test:a11y     # WCAG 2.2 AA + keyboard/focus/target-size (e2e/nfr.a11y.test.ts) — 38 tests
 npm run test:responsive # XS/SM/MD/LG/XL reflow (e2e/nfr.responsive.test.ts) — 16 tests
 npm run test:perf     # asset budget + interaction cost (e2e/nfr.performance.test.ts) — 7 tests
-npm run test:site      # docs/ self-containment: no CDN, offline, file://, Q&A integrity (e2e/nfr.site.test.ts) — 10 tests
-npm run test:nfr      # a11y + responsive + perf + site (headless Chromium) — 71 tests
+npm run test:site      # docs/ self-containment: no CDN, offline, file://, Q&A integrity (e2e/nfr.site.test.ts) — 20 tests
+npm run test:nfr      # a11y + responsive + perf + site (headless Chromium) — 81 tests
 npm run verify        # build + all of the above. Use this before shipping.
 ```
 
