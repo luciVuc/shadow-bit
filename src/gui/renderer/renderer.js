@@ -1232,11 +1232,15 @@ async function refreshSessions() {
       `<button type="button" class="pw-toggle" aria-label="Show password">👁</button>` +
       `</div>` +
       `<div class="actions">
-         <button class="secondary btn-folder">Open Folder</button>
-         <button class="secondary btn-add">Add Files…</button>
-         <button class="secondary btn-tree">Files</button>
-         <button class="primary btn-close">Close &amp; Save</button>
-         <button class="secondary btn-discard">Discard</button>
+        <div class="left-actions">
+          <button class="secondary btn-folder">Open Folder</button>
+          <button class="secondary btn-add">Add Files…</button>
+          <button class="secondary btn-tree">Files</button>
+        </div>
+        <div class="right-actions">
+          <button class="primary btn-close">Close &amp; Save</button>
+          <button class="secondary btn-discard">Discard</button>
+        </div>
        </div>` +
       `<div class="session-tree hidden"></div>`;
 

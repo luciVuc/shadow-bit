@@ -556,6 +556,7 @@ button:focus-visible {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 8px;
+  justify-content: space-between;
 }
 .session input,
 .session .pw-wrapper {
