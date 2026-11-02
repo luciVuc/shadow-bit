@@ -20,6 +20,7 @@ import * as path from "path";
 import { existsSync, readFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { loadSessions } from "../core/sessions";
+import { watchWorkingDir } from "../core/watch";
 import { VAULT_EXT, VAULT_EXTS, hasVaultExt } from "../core/container";
 import {
   addRecentVault,
@@ -703,6 +704,7 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  stopAllFileWatchers();
   if (process.platform !== "darwin") app.quit();
 });
 
@@ -1131,6 +1133,7 @@ handle("vault:addFiles", (_e, args) =>
   wrapWorker("addFiles", {
     vaultPath: args.vaultPath,
     paths: args.paths,
+    parentRel: args.parentRel ?? "",
   }),
 );
 handle("vault:setMeta", (_e, args) =>
@@ -1156,7 +1159,17 @@ handle("vault:setMeta", (_e, args) =>
 // opened is addressable, and the main thread stays free of vault I/O.
 
 handle("files:list", (_e, args) =>
-  wrapWorker("listFiles", { workingDir: args.workingDir }),
+  wrapWorker("listFiles", {
+    workingDir: args.workingDir,
+    relPath: args.relPath ?? "",
+  }),
+);
+handle("files:createDir", (_e, args) =>
+  wrapWorker("createDir", {
+    workingDir: args.workingDir,
+    parentRel: args.parentRel ?? "",
+    name: args.name,
+  }),
 );
 handle("files:delete", (_e, args) =>
   wrapWorker("deleteFile", {
@@ -1171,6 +1184,56 @@ handle("files:rename", (_e, args) =>
     newName: args.newName,
   }),
 );
+
+// ---------------------------------------------------------------------------
+// IPC: working-directory change watching (auto-refresh for the file browser)
+// ---------------------------------------------------------------------------
+//
+// The watch itself lives in the core (watchWorkingDir in core/watch.ts), which
+// validates the folder against the session registry and stops by itself when
+// that vault closes — the main thread never touches vault I/O here, it only
+// forwards the (already validated) change notification to the renderer.
+//
+// One watcher per working directory, deduplicated: the renderer asks to watch
+// every time it opens a Files panel, and multiple refreshes in a row must not
+// stack handles.
+
+const activeWatchers = new Map<string, () => void>();
+
+handle("files:watch", (_e, args) => {
+  const { workingDir } = args ?? {};
+  if (typeof workingDir !== "string" || activeWatchers.has(workingDir)) {
+    return { ok: true, value: null };
+  }
+  return wrap(() => {
+    const stop = watchWorkingDir(workingDir, (resolved) => {
+      sendToRenderer("files:changed", resolved);
+    });
+    // Key on the RESOLVED path: the same folder can be requested under
+    // different spellings (trailing separator), and stop() must be findable
+    // by whatever the renderer passes later.
+    const resolvedRoot = path.resolve(workingDir);
+    activeWatchers.set(resolvedRoot, stop);
+    return null;
+  });
+});
+
+handle("files:unwatch", (_e, args) => {
+  const { workingDir } = args ?? {};
+  if (typeof workingDir !== "string") return { ok: true, value: null };
+  const stop = activeWatchers.get(path.resolve(workingDir));
+  if (stop) {
+    stop();
+    activeWatchers.delete(path.resolve(workingDir));
+  }
+  return { ok: true, value: null };
+});
+
+/** Stop every watcher — used when the last window closes. */
+function stopAllFileWatchers(): void {
+  for (const stop of activeWatchers.values()) stop();
+  activeWatchers.clear();
+}
 
 // ---------------------------------------------------------------------------
 // IPC: confirm dialog

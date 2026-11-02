@@ -1262,14 +1262,26 @@ async function refreshSessions() {
 
     const addPaths = async (paths) => {
       if (!paths || paths.length === 0) return;
+      // Files go INTO the folder the Files panel is currently showing, not
+      // the vault root — the browser's navigation position is the destination
+      // context for "Add Files" and drag-and-drop alike.
+      const parentRel = filePanelRel.get(s.workingDir) ?? "";
       await withLoading(async () => {
         try {
           const { count, symlinksSkipped } = result(
-            await api.addFiles({ vaultPath: s.vaultPath, paths }),
+            await api.addFiles({ vaultPath: s.vaultPath, paths, parentRel }),
           );
-          ok(`Added ${count} item(s). Close to save.`);
+          // Name the destination so it is unambiguous when the panel is
+          // deeper than the root: "Added 3 item(s) into `sub/`" beats a bare
+          // "Added 3 item(s)" when the files did not appear at the top.
+          const where = parentRel ? ` into "${parentRel}/"` : "";
+          ok(`Added ${count} item(s)${where}. Close to save.`);
           if (symlinksSkipped > 0)
             warn(`${symlinksSkipped} symlink(s) were skipped.`);
+          // Immediate refresh of an open Files panel — addFiles goes through
+          // the watcher too, but this skips the debounce for an action the
+          // user just performed.
+          afterMutationRefresh(s.workingDir);
         } catch (e) {
           err(e.message);
         }
@@ -1297,8 +1309,9 @@ async function refreshSessions() {
 
     // In-app file browser toggle
     el.querySelector(".btn-tree").onclick = async () => {
-      const hidden = treeContainer.classList.toggle("hidden");
-      if (!hidden) await renderFileTree(treeContainer, s.workingDir);
+      const willHide = !treeContainer.classList.contains("hidden");
+      if (willHide) closeFilePanel(treeContainer, s.workingDir);
+      else await openFilePanel(treeContainer, s.workingDir);
     };
 
     el.querySelector(".btn-close").onclick = async () => {
@@ -1356,168 +1369,330 @@ async function refreshSessions() {
 
 // ---------------------------------------------------------------------------
 // In-app file browser
+//
+// Navigation model like a normal file manager: the panel lists ONE folder at
+// a time, folders are navigated with breadcrumbs, and the listing refreshes
+// itself live. The refresh is driven by core/watch.ts via the files:changed
+// event, so it covers every mutation path — "Add Files", drag-and-drop,
+// rename/delete in this panel, and edits made directly in the OS file
+// manager — instead of only the actions this panel performed itself.
+//
+// Per-working-dir navigation state lives here so closing and reopening the
+// panel keeps the user's context.
 // ---------------------------------------------------------------------------
-async function renderFileTree(container, workingDir) {
-  container.innerHTML = "";
-  let entries;
-  try {
-    entries = result(await api.listFiles({ workingDir }));
-  } catch (e) {
-    container.innerHTML = `<p class="file-tree-empty">${escHtml(e.message)}</p>`;
-    return;
-  }
-  if (!entries || entries.length === 0) {
-    container.innerHTML = `<div class="file-tree"><p class="file-tree-empty">Empty vault</p></div>`;
-    return;
-  }
-  const treeEl = document.createElement("div");
-  treeEl.className = "file-tree";
-  renderTreeLevel(treeEl, entries, workingDir);
-  container.appendChild(treeEl);
+const filePanelRel = new Map(); // workingDir -> currently listed relative path
+
+/** One invoker per working dir, so duplicate panels do not stack watchers. */
+const filePanelWatched = new Set();
+
+let filesChangedBound = false;
+
+/** Bind the change event exactly once; re-list every open panel for that dir. */
+function bindFilesChanged() {
+  if (filesChangedBound) return;
+  filesChangedBound = true;
+  api.onFilesChanged((workingDir) => {
+    document.querySelectorAll(".session-tree").forEach((container) => {
+      if (
+        container.dataset.workingDir === workingDir &&
+        !container.classList.contains("hidden")
+      ) {
+        renderFileBrowser(container, workingDir, filePanelRel.get(workingDir));
+      }
+    });
+    afterMutationRefresh(workingDir);
+  });
 }
 
-function renderTreeLevel(parent, entries, workingDir) {
-  for (const entry of entries) {
-    const item = document.createElement("div");
-    item.className = `tree-item ${entry.type}`;
+/**
+ * Re-list any open panel for the vault that just changed. Called directly
+ * after in-app mutations (add/rename/delete/new folder) so the panel does not
+ * wait out the watcher's debounce for an action the user just performed.
+ */
+function afterMutationRefresh(workingDir) {
+  document.querySelectorAll(".session-tree").forEach((container) => {
+    if (
+      container.dataset.workingDir === workingDir &&
+      !container.classList.contains("hidden")
+    ) {
+      renderFileBrowser(container, workingDir, filePanelRel.get(workingDir));
+    }
+  });
+}
 
-    const icon = document.createElement("span");
-    icon.className = "tree-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = entry.type === "dir" ? "📁" : "📄";
+/** Open the Files panel for a card and make sure its watcher is running. */
+async function openFilePanel(container, workingDir) {
+  bindFilesChanged();
+  container.classList.remove("hidden");
+  await renderFileBrowser(container, workingDir, filePanelRel.get(workingDir) ?? "");
+  try {
+    result(await api.watchFiles(workingDir));
+    filePanelWatched.add(workingDir);
+  } catch {
+    // no watch: the manual refresh button still works
+  }
+}
 
-    const name = document.createElement("span");
+/** Close the Files panel and drop the watch if no other visible panel needs it. */
+function closeFilePanel(container, workingDir) {
+  container.classList.add("hidden");
+  const stillVisible = Array.from(
+    document.querySelectorAll(".session-tree"),
+  ).some(
+    (c) =>
+      c !== container &&
+      c.dataset.workingDir === workingDir &&
+      !c.classList.contains("hidden"),
+  );
+  if (!stillVisible && filePanelWatched.has(workingDir)) {
+    filePanelWatched.delete(workingDir);
+    api.unwatchFiles(workingDir).catch(() => {}); // fire-and-forget
+  }
+}
+
+/** Force a re-render of every open panel for a dir (manual refresh button). */
+function refreshFilePanels(workingDir) {
+  document.querySelectorAll(".session-tree").forEach((container) => {
+    if (
+      container.dataset.workingDir === workingDir &&
+      !container.classList.contains("hidden")
+    ) {
+      renderFileBrowser(container, workingDir, filePanelRel.get(workingDir));
+    }
+  });
+}
+
+/**
+ * Render the browse panel for one folder.
+ *
+ * `rel` is the folder being listed, "" = the working folder itself.
+ * DOM is built with createElement only — no markup strings, per AGENTS.md.
+ */
+async function renderFileBrowser(container, workingDir, rel) {
+  container.dataset.workingDir = workingDir;
+  container.dataset.rel = rel || "";
+  rel = rel || "";
+  filePanelRel.set(workingDir, rel);
+
+  let entries;
+  try {
+    entries = result(await api.listFiles({ workingDir, relPath: rel }));
+  } catch (e) {
+    // A listing can fail because the folder was renamed or deleted elsewhere
+    // in the same instant. Fall back to the working folder rather than dying.
+    if (rel !== "") {
+      filePanelRel.set(workingDir, "");
+      afterMutationRefresh(workingDir);
+      return;
+    }
+    container.replaceChildren();
+    const p = document.createElement("p");
+    p.className = "file-tree-empty";
+    p.textContent = e.message;
+    container.appendChild(p);
+    return;
+  }
+
+  container.replaceChildren();
+  const browser = document.createElement("div");
+  browser.className = "file-browser";
+
+  // -- breadcrumb ------------------------------------------------------
+  const crumbs = document.createElement("nav");
+  crumbs.className = "file-crumbs";
+  crumbs.setAttribute("aria-label", "Folder path");
+
+  const mkCrumb = (label, relTarget) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "file-crumb" + (relTarget === rel ? " current" : "");
+    b.textContent = label;
+    b.setAttribute("aria-label", `Open folder ${label}`);
+    b.onclick = () =>
+      renderFileBrowser(container, workingDir, relTarget);
+    return b;
+  };
+  crumbs.appendChild(mkCrumb("Working folder", ""));
+  const segs = rel ? rel.split("/") : [];
+  let walk = "";
+  for (const seg of segs) {
+    walk = walk ? `${walk}/${seg}` : seg;
+    crumbs.appendChild(document.createTextNode("›"));
+    crumbs.appendChild(mkCrumb(seg, walk));
+  }
+  browser.appendChild(crumbs);
+
+  // -- toolbar ---------------------------------------------------------
+  const toolbar = document.createElement("div");
+  toolbar.className = "file-toolbar";
+  const newBtn = document.createElement("button");
+  newBtn.type = "button";
+  newBtn.className = "secondary";
+  newBtn.textContent = "New Folder";
+  newBtn.setAttribute("aria-label", "New folder in this folder");
+  newBtn.onclick = async () => {
+    const name = await askText({
+      title: "New folder",
+      value: "",
+      confirmLabel: "Create",
+    });
+    if (!name) return;
+    try {
+      result(await api.createDir({ workingDir, parentRel: rel, name }));
+      ok(`Created folder "${name}".`);
+      afterMutationRefresh(workingDir);
+    } catch (ex) {
+      err(ex.message);
+    }
+  };
+  const refreshBtn = document.createElement("button");
+  refreshBtn.type = "button";
+  refreshBtn.className = "secondary";
+  refreshBtn.textContent = "↻ Refresh";
+  refreshBtn.setAttribute("aria-label", "Refresh file list");
+  refreshBtn.onclick = () => afterMutationRefresh(workingDir);
+  toolbar.append(newBtn, refreshBtn);
+  browser.appendChild(toolbar);
+
+  // -- listing ---------------------------------------------------------
+  if (!entries || entries.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "file-tree-empty";
+    empty.textContent =
+      rel === ""
+        ? "Empty vault — use \u201cAdd Files\u201d or drag files here."
+        : "This folder is empty.";
+    browser.appendChild(empty);
+  } else {
+    const treeEl = document.createElement("div");
+    treeEl.className = "file-tree";
+    for (const entry of entries) {
+      treeEl.appendChild(
+        buildTreeRow(entry, workingDir, container),
+      );
+    }
+    browser.appendChild(treeEl);
+  }
+  container.appendChild(browser);
+}
+
+/**
+ * One row of the listing. Directories navigate into (the name is the
+ * affordance, and it is a real button so it is keyboard-reachable); files open
+ * in the OS. Every row carries rename + delete; deletion is confirmed through
+ * the native dialog, never window.confirm (which always resolves false).
+ */
+function buildTreeRow(entry, workingDir, container) {
+  const item = document.createElement("div");
+  item.className = `tree-item ${entry.type}`;
+
+  const icon = document.createElement("span");
+  icon.className = "tree-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = entry.type === "dir" ? "📁" : "📄";
+
+  let name;
+  if (entry.type === "dir") {
+    name = document.createElement("button");
+    name.type = "button";
+    name.className = "tree-name tree-name-btn";
+    name.textContent = entry.name;
+    name.title = `Open folder ${entry.name}`;
+    name.setAttribute("aria-label", `Open folder ${entry.name}`);
+    name.onclick = () =>
+      renderFileBrowser(container, workingDir, entry.rel);
+  } else {
+    name = document.createElement("span");
     name.className = "tree-name";
     name.textContent = entry.name;
     name.title = entry.rel;
+  }
 
-    const actions = document.createElement("div");
-    actions.className = "tree-actions";
+  const actions = document.createElement("div");
+  actions.className = "tree-actions";
 
-    if (entry.type === "file") {
-      const size = document.createElement("span");
-      size.className = "tree-size";
-      size.textContent = formatBytes(entry.size);
-      item.append(icon, name, size, actions);
-
-      // Open file
-      const openBtn = document.createElement("button");
-      openBtn.title = "Open";
-      openBtn.setAttribute("aria-label", `Open ${entry.name}`);
-      openBtn.textContent = "↗";
-      openBtn.onclick = (e) => {
-        e.stopPropagation();
-        api.openPath(`${workingDir}/${entry.rel}`);
-      };
-
-      // Rename
-      const renBtn = document.createElement("button");
-      renBtn.title = "Rename";
-      renBtn.setAttribute("aria-label", `Rename ${entry.name}`);
-      renBtn.textContent = "✏️";
-      renBtn.onclick = async (e) => {
-        e.stopPropagation();
-        const newName = await askText({
-          title: "Rename",
-          value: entry.name,
-          confirmLabel: "Rename",
-        });
-        if (!newName || newName === entry.name) return;
-        try {
-          result(await api.renameFile({ workingDir, oldRel: entry.rel, newName }));
-          await renderFileTree(item.closest(".session-tree"), workingDir);
-        } catch (ex) {
-          err(ex.message);
-        }
-      };
-
-      // Delete
-      const delBtn = document.createElement("button");
-      delBtn.title = "Delete";
-      delBtn.setAttribute("aria-label", `Delete ${entry.name}`);
-      delBtn.textContent = "🗑";
-      delBtn.onclick = async (e) => {
-        e.stopPropagation();
-        // Not window.confirm: it always resolves false under automation and is
-        // an unstyleable browser dialog next to every other confirmation in
-        // this app, which uses the native message box.
-        const yes = await askConfirm({
-          title: `Delete ${entry.name}?`,
-          message: `Delete "${entry.name}" from this vault?`,
-          detail: "It is removed from the working folder. Close & Save writes the change to the vault file.",
-          confirmLabel: "Delete",
-        });
-        if (!yes) return;
-        try {
-          result(await api.deleteFile({ workingDir, relPath: entry.rel }));
-          await renderFileTree(item.closest(".session-tree"), workingDir);
-        } catch (ex) {
-          err(ex.message);
-        }
-      };
-      actions.append(openBtn, renBtn, delBtn);
-      parent.appendChild(item);
-      continue;
+  // Rename (files AND folders)
+  const renBtn = document.createElement("button");
+  renBtn.title = "Rename";
+  renBtn.setAttribute("aria-label", `Rename ${entry.name}`);
+  renBtn.textContent = "\u270F\uFE0F";
+  renBtn.onclick = async (e) => {
+    e.stopPropagation();
+    const newName = await askText({
+      title: "Rename",
+      value: entry.name,
+      confirmLabel: "Rename",
+    });
+    if (!newName || newName === entry.name) return;
+    try {
+      result(await api.renameFile({ workingDir, oldRel: entry.rel, newName }));
+      if (filePanelRel.get(workingDir) === entry.rel) {
+        // The folder we are standing inside was renamed: walk to its parent,
+        // because the old path no longer exists.
+        filePanelRel.set(
+          workingDir,
+          entry.rel.includes("/") ? entry.rel.slice(0, entry.rel.lastIndexOf("/")) : "",
+        );
+      }
+      afterMutationRefresh(workingDir);
+    } catch (ex) {
+      err(ex.message);
     }
+  };
 
-    // Directory — collapsible. Children are built the first time the folder is
-    // expanded rather than up front: the core already sent the whole subtree in
-    // one message, so eagerly rendering it built a DOM node per file in a large
-    // vault before the user had looked at any of it.
-    const toggleBtn = document.createElement("button");
-    toggleBtn.className = "tree-toggle-btn";
-    toggleBtn.textContent = "▸";
-    toggleBtn.setAttribute("aria-label", `Expand ${entry.name}`);
-    toggleBtn.setAttribute("aria-expanded", "false");
+  // Delete (files AND folders)
+  const delBtn = document.createElement("button");
+  const isDir = entry.type === "dir";
+  delBtn.title = isDir ? "Delete folder" : "Delete";
+  delBtn.setAttribute("aria-label", `${isDir ? "Delete folder" : "Delete"} ${entry.name}`);
+  delBtn.textContent = "\uD83D\uDDD1";
+  delBtn.onclick = async (e) => {
+    e.stopPropagation();
+    const yes = await askConfirm({
+      title: `Delete ${entry.name}?`,
+      message: isDir
+        ? `Delete "${entry.name}" and everything in it?`
+        : `Delete "${entry.name}" from this vault?`,
+      detail:
+        "It is removed from the working folder. Close & Save writes the change to the vault file.",
+      confirmLabel: "Delete",
+    });
+    if (!yes) return;
+    try {
+      result(await api.deleteFile({ workingDir, relPath: entry.rel }));
+      if (filePanelRel.get(workingDir) === entry.rel) filePanelRel.set(workingDir, "");
+      afterMutationRefresh(workingDir);
+    } catch (ex) {
+      err(ex.message);
+    }
+  };
+  actions.append(renBtn, delBtn);
 
-    const childContainer = document.createElement("div");
-    childContainer.className = "tree-indent hidden";
-
-    let childrenBuilt = false;
-    const buildChildren = () => {
-      if (childrenBuilt) return;
-      childrenBuilt = true;
-      renderTreeLevel(childContainer, entry.children || [], workingDir);
-    };
-
-    toggleBtn.onclick = () => {
-      const isOpen = !childContainer.classList.contains("hidden");
-      if (!isOpen) buildChildren();
-      childContainer.classList.toggle("hidden", isOpen);
-      toggleBtn.textContent = isOpen ? "▸" : "▾";
-      toggleBtn.setAttribute("aria-expanded", String(!isOpen));
-      toggleBtn.setAttribute(
-        "aria-label",
-        isOpen ? `Expand ${entry.name}` : `Collapse ${entry.name}`,
-      );
-    };
-
-    // Delete directory
-    const delBtn = document.createElement("button");
-    delBtn.title = "Delete folder";
-    delBtn.setAttribute("aria-label", `Delete folder ${entry.name}`);
-    delBtn.textContent = "🗑";
-    delBtn.onclick = async (e) => {
+  if (entry.type === "file") {
+    const size = document.createElement("span");
+    size.className = "tree-size";
+    size.textContent = formatBytes(entry.size);
+    item.append(icon, name, size, actions);
+  } else {
+    // Extra affordance for directories: quick "open in OS file manager".
+    const openBtn = document.createElement("button");
+    openBtn.title = "Open in file manager";
+    openBtn.setAttribute("aria-label", `Open folder ${entry.name} in file manager`);
+    openBtn.textContent = "\u2197";
+    openBtn.onclick = (e) => {
       e.stopPropagation();
-      const yes = await askConfirm({
-        title: `Delete folder ${entry.name}?`,
-        message: `Delete "${entry.name}" and everything in it?`,
-        detail: "It is removed from the working folder. Close & Save writes the change to the vault file.",
-        confirmLabel: "Delete",
-      });
-      if (!yes) return;
-      try {
-        result(await api.deleteFile({ workingDir, relPath: entry.rel }));
-        await renderFileTree(item.closest(".session-tree"), workingDir);
-      } catch (ex) {
-        err(ex.message);
+      api.openPath(`${workingDir}/${entry.rel}`);
+    };
+    actions.prepend(openBtn);
+    item.append(icon, name, actions);
+    // Clicking anywhere else on the row navigates in too.
+    item.onclick = (e) => {
+      if (e.target === item || e.target === icon) {
+        renderFileBrowser(container, workingDir, entry.rel);
       }
     };
-    actions.append(delBtn);
-
-    parent.appendChild(item);
-    parent.appendChild(childContainer);
   }
+  return item;
 }
 
 $("sessions-refresh").onclick = refreshSessions;

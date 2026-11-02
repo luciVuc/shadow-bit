@@ -295,12 +295,12 @@ npm run gui:dev    # launch without rebuilding
 
 **Tabs:**
 
-| Tab             | What it does                                                                                                                                                                                        |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Open**        | Browse for a `.svlt` file, enter password + optional keyfile, open. Working folder launches automatically in Finder/Explorer.                                                                       |
-| **Create**      | Choose a save path, set a password, optionally seed from a folder, generate a recovery key. **Advanced options** (collapsed): cipher algorithm, keyfile second factor, paranoid mode.               |
-| **Manage**      | View info, change password, recover with recovery key, regenerate or remove recovery key, delete or shred the vault.                                                                                |
-| **Open Vaults** | All active sessions. Drag files/folders onto the drop zone, or use **Add Files…**. Enter password → **Close & Save** or **Discard**. Keyfiles are remembered from open time — no need to re-browse. |
+| Tab             | What it does                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Open**        | Browse for a `.svlt` file, enter password + optional keyfile, open. Working folder launches automatically in Finder/Explorer.                                                                                                                                                                                                                                                                                                 |
+| **Create**      | Choose a save path, set a password, optionally seed from a folder, generate a recovery key. **Advanced options** (collapsed): cipher algorithm, keyfile second factor, paranoid mode.                                                                                                                                                                                                                                         |
+| **Manage**      | View info, change password, recover with recovery key, regenerate or remove recovery key, delete or shred the vault.                                                                                                                                                                                                                                                                                                          |
+| **Open Vaults** | All active sessions. Drag files/folders onto the drop zone, or use **Add Files…** — they are added into the folder the **Files** panel is showing (the vault root if none). The Files panel is a small file manager: breadcrumbs, folder navigation, rename/delete/new-folder, and self-refreshing listings. Enter password → **Close & Save** or **Discard**. Keyfiles are remembered from open time — no need to re-browse. |
 
 **Menu:**
 
@@ -602,7 +602,7 @@ independent audit. See [SECURITY.md](SECURITY.md) for the full threat model.
 ```bash
 npm run verify  # everything below — use this before shipping
 
-npm test               # 101 unit/integration tests: crypto, round-trips, edge cases
+npm test               # 105 unit/integration tests: crypto, round-trips, edge cases
 npm run test:cli-e2e   # 36 real-subprocess CLI tests: every command, flag and error path
 npm run test:gui       # 26 Electron + Playwright GUI tests (needs a display)
 npm run test:nfr       # 71 non-functional tests in headless Chromium

@@ -22,9 +22,9 @@ npm run gui:dev        # launch Electron without rebuilding
 ## Tests
 
 ```bash
-npm test              # node:test suite in src/test/ (security + round-trip) — 101 tests
+npm test              # node:test suite in src/test/ (security + round-trip) — 105 tests
 npm run test:cli-e2e  # real-subprocess CLI coverage (e2e/cli.test.ts) — 36 tests
-npm run test:gui      # Electron + Playwright GUI tests (e2e/smoke.test.ts) — 31 tests
+npm run test:gui      # Electron + Playwright GUI tests (e2e/smoke.test.ts) — 33 tests
 npm run test:gui:headless  # same suite, forced virtual display (Xvfb)
 npm run test:a11y     # WCAG 2.2 AA + keyboard/focus/target-size (e2e/nfr.a11y.test.ts) — 38 tests
 npm run test:responsive # XS/SM/MD/LG/XL reflow (e2e/nfr.responsive.test.ts) — 16 tests
@@ -218,7 +218,7 @@ null })` means "whatever the host OS reports", not "off". The macOS CI runner
   rather than waiting for CI to tell you again.
 
 - A test that injects DOM into the live page must clean up after itself. An un-closed modal is a full-viewport overlay that swallows the clicks `switchTab` makes, and injected markup is audited by the next test — so one failure cascades into unrelated suites and buries the real defect. `resetInjectedDom()` in `e2e/nfr.a11y.test.ts` exists for this and every `describe` calls it.
-- `src/gui/main.ts` performs **no** vault I/O and handles **no** key material. Every vault operation — including `info`, `sessions`, `addFiles`, `setMeta` and the in-app file browser (`listFiles` / `deleteFile` / `renameFile`) — is dispatched to the worker thread via `vault-worker-bridge.ts`. The bridge has no synchronous fallback on purpose: falling back would put keys back on the main thread. The main thread only owns UI concerns (window lifecycle, dialogs, clipboard, and the auto-lock/quit guards, which read the session list).
+- `src/gui/main.ts` performs **no** vault I/O and handles **no** key material. Every vault operation — including `info`, `sessions`, `addFiles`, `setMeta` and the in-app file browser (`listFiles` / `deleteFile` / `renameFile` / `createDir`) — is dispatched to the worker thread via `vault-worker-bridge.ts`. The bridge has no synchronous fallback on purpose: falling back would put keys back on the main thread. The main thread only owns UI concerns (window lifecycle, dialogs, clipboard, the working-dir change watcher — which only forwards a core-validated notification — and the auto-lock/quit guards, which read the session list).
 - **Auto-lock measures _inactivity_, not "time since the last vault command."** The renderer forwards activity through `app:activity`, throttled to one message per 20 s, and the window's own `focus` event counts too. The timer used to reset only on vault IPC traffic, so a user editing files in their working folder — idle as far as ShadowBit was concerned — got locked out with their unsaved changes erased. The settings control already said "after idle", so this makes the behaviour match the label.
 - **Lock-everything runs on the worker, not the main thread.** `vault.lockAllOpenVaults()` is dispatched as the `lockAll` op. Securely erasing working directories means overwriting every decrypted byte on disk; done in `main.ts` it froze the entire UI for the length of the wipe, including the toast reporting that it had happened.
 - **Saved window bounds are clamped to a display that still exists** (`usableWindowBounds()`). A monitor can be unplugged between runs, and restoring an off-screen x/y produces a window the user cannot reach — indistinguishable from the app failing to start.
@@ -241,6 +241,7 @@ null })` means "whatever the host OS reports", not "off". The macOS CI runner
   slow runner failed a `assert.ok` with no other symptom.
 
 - **A live working directory is a moving target.** `walk()`, `listWorkingDir` and `copyDirNoSymlinks` each `lstat` an entry that may have been deleted between `readdir` and the stat, because the user is still editing the folder. All three swallow that one failure and continue; the alternative is a `close` or a file-browser listing that fails wholesale over a file the user deleted a second ago.
+- **The in-app file browser is a navigation view driven by a watcher, not a snapshot.** `listWorkingSubDir` lists ONE folder per call (empty `relPath` = the working folder; any other value is validated against the resolved session registry — the same trust boundary as delete/rename), and `core/watch.ts` watches the folder with one `fs.watch` handle per discovered directory. Why per-directory and not `fs.watch(recursive)`: that option only exists on macOS/Windows, and a Linux install would silently stop reporting every file not at the top level; the per-directory set is portable with no third-party dependency. The watcher debounces (~300 ms) and re-validates against the session registry BEFORE notifying — a close/discard/lock erases the working dir, and those events must not fire one final `files:changed` for a folder that no longer exists. The renderer re-lists only the current folder of an open panel (`files:changed` is keyed by the resolved working dir) and never rebuilds the session card, so a password and in-progress inputs survive a background change. When you touch this: any operation that takes a `relPath` from the renderer resolves through `resolveOpenWorkingDir` and refuses `..`/absolute/symlink escapes — each new one is threaded worker → `main.ts` → preload → renderer AND listed in `e2e/nfr/stub-bridge.js` ENVELOPED (this bit `files:createDir`'s siblings once already; `addToSession` takes an optional `parentRel` so Add Files / drag-drop land in the folder the browser is showing, not the root). Symlinks are never listed, never watched.
 
 ## Gotchas
 

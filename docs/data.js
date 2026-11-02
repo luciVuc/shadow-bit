@@ -45,7 +45,7 @@ window.APP_DATA = {
     title: "ShadowBit",
     tagline: "One encrypted file. One password. No accounts, no cloud.",
     subTagline: "Lock a folder into a single .svlt file and send it anywhere.",
-    version: "1.0.1",
+    version: "1.0.2",
     // Owner is `luciVuc` — GitHub does NOT redirect on owner-name case, so the
     // lowercase spelling 404s. This was hand-transcribed from the author email
     // once and every download link on the site 404'd because of it.
@@ -226,7 +226,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "macOS — Apple Silicon",
-          file: "ShadowBit-1.0.1-arm64.dmg",
+          file: "ShadowBit-1.0.2-arm64.dmg",
           format: ".dmg",
           size: "~99 MB",
           primary: true,
@@ -234,7 +234,7 @@ window.APP_DATA = {
         },
         {
           label: "macOS — Intel",
-          file: "ShadowBit-1.0.1-x64.dmg",
+          file: "ShadowBit-1.0.2-x64.dmg",
           format: ".dmg",
           size: "~100 MB",
           arch: "Intel",
@@ -267,7 +267,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Windows 10 / 11",
-          file: "ShadowBit.Setup.1.0.1.exe",
+          file: "ShadowBit.Setup.1.0.2.exe",
           format: ".exe installer",
           size: "~98 MB",
           primary: true,
@@ -298,7 +298,7 @@ window.APP_DATA = {
       builds: [
         {
           label: "Linux — AppImage",
-          file: "ShadowBit-1.0.1.AppImage",
+          file: "ShadowBit-1.0.2.AppImage",
           format: ".AppImage",
           size: "~120 MB",
           primary: true,
@@ -306,7 +306,7 @@ window.APP_DATA = {
         },
         {
           label: "Linux — Debian / Ubuntu package",
-          file: "shadow-bit_1.0.1_amd64.deb",
+          file: "shadow-bit_1.0.2_amd64.deb",
           format: ".deb",
           size: "~95 MB",
           arch: "64-bit, Debian family",
@@ -597,7 +597,7 @@ window.APP_DATA = {
       id: "sessions",
       label: "Open Vaults",
       icon: "📋",
-      desc: "All active sessions. Drag files or folders onto a vault's drop zone or click Add Files… Then Close & Save to re-encrypt, or Discard to throw away changes. Keyfiles are remembered from open time.",
+      desc: "All active sessions. Drag files or folders onto a vault's drop zone or click Add Files… — items are added into the folder the Files panel is showing. The Files panel is a small file manager: breadcrumbs, folder navigation, rename and delete for files and folders, New Folder, and listings that refresh themselves. Then Close & Save to re-encrypt, or Discard to throw away changes. Keyfiles are remembered from open time.",
     },
   ],
 
@@ -832,7 +832,7 @@ window.APP_DATA = {
         {
           q: "Has ShadowBit been independently audited?",
           a: [
-            "No. It has been through an internal code review whose findings were fixed and covered by regression tests — 249 automated tests across crypto round-trips, the real CLI as a subprocess, the real desktop app, WCAG 2.2 AA accessibility, responsive reflow and performance budgets. Nobody outside the project has assessed it.",
+            "No. It has been through an internal code review whose findings were fixed and covered by regression tests — 255 automated tests across crypto round-trips, the real CLI as a subprocess, the real desktop app, WCAG 2.2 AA accessibility, responsive reflow and performance budgets. Nobody outside the project has assessed it.",
             "SECURITY.md documents the threat model, including what is explicitly out of scope. For classified or life-critical data, choose a tool with outside scrutiny.",
           ],
         },
@@ -1055,11 +1055,11 @@ window.APP_DATA = {
     },
     {
       path: "src/test/ + e2e/",
-      desc: "Test suite — 249 tests across 7 runners (node:test + Playwright)",
+      desc: "Test suite — 255 tests across 7 runners (node:test + Playwright)",
       files: [
         {
           name: "src/test/core.test.ts",
-          desc: "91 tests: cryptographic round-trips, error cases, paranoid mode, the full keyfile lifecycle, cipher agility, timestamp scrubbing, local-key and session-lock races",
+          desc: "95 tests: cryptographic round-trips, error cases, paranoid mode, the full keyfile lifecycle, cipher agility, timestamp scrubbing, local-key and session-lock races",
         },
         {
           name: "src/test/cli.test.ts",
@@ -1071,7 +1071,7 @@ window.APP_DATA = {
         },
         {
           name: "e2e/smoke.test.ts",
-          desc: "31 tests: the real Electron app — tab flows, metadata, settings, dialogs and window sizing",
+          desc: "33 tests: the real Electron app — tab flows, metadata, settings, dialogs and window sizing",
         },
         {
           name: "e2e/nfr.*.test.ts",

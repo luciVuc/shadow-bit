@@ -564,12 +564,9 @@ button:focus-visible {
 }
 
 /* ── File tree browser ────────────────────────────────────────────── */
+/* The listing inside .file-browser (the browser chrome carries the border,
+   rounding and margins; the listing only needs its own scroll window). */
 .file-tree {
-  font-size: 13px;
-  margin: 8px 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
   max-height: 220px;
   overflow-y: auto;
 }
@@ -668,6 +665,79 @@ button:focus-visible {
 }
 .tree-toggle-btn:hover {
   color: var(--text);
+}
+
+/* ── File browser (navigation model) ──────────────────────────────── */
+.file-browser {
+  font-size: 13px;
+  margin: 8px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: transparent;
+}
+.file-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.file-crumb {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  /* 24px row height so breadcrumb targets meet the WCAG 2.5.8 floor. */
+  min-height: 24px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.file-crumb:hover {
+  color: var(--text);
+  background: var(--border);
+}
+.file-crumb.current {
+  color: var(--text);
+  font-weight: 600;
+  cursor: default;
+}
+.file-toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.file-toolbar button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.file-toolbar button:hover {
+  background: var(--border);
+  color: var(--text);
+}
+/* Directory names navigate in; they are real buttons but styled as rows. */
+.tree-name-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+  text-align: left;
+}
+.tree-name-btn:hover {
+  text-decoration: underline;
 }
 
 /* ── Strength bar ─────────────────────────────────────────────────── */

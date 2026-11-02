@@ -754,6 +754,128 @@ describe("ShadowBit GUI smoke tests", () => {
   });
 
   // -------------------------------------------------------------------------
+  // Navigation model: the browser lists ONE folder at a time and moves between
+  // folders with breadcrumbs — a real file manager, not a static snapshot.
+  test("file browser — navigate into a folder and back out via breadcrumbs", async () => {
+    const wd = await page
+      .locator(".session .wd")
+      .first()
+      .textContent()
+      .then((t) => (t ?? "").trim());
+    fs.mkdirSync(path.join(wd, "photos"), { recursive: true });
+    fs.writeFileSync(path.join(wd, "photos", "img.png"), "pretend png");
+    fs.writeFileSync(path.join(wd, "parent-only.txt"), "stays in the parent");
+
+    // The panel is open from the previous test; refresh it.
+    await page.click('.file-toolbar button[aria-label="Refresh file list"]');
+    await page.waitForSelector(
+      '.file-tree button.tree-name-btn[aria-label="Open folder photos"]',
+      { timeout: UI_TIMEOUT },
+    );
+    await page.waitForSelector(
+      '.file-tree .tree-actions button[aria-label="Delete parent-only.txt"]',
+      { timeout: UI_TIMEOUT },
+    );
+
+    // Click the folder name to navigate into it.
+    await page.click(
+      '.file-tree button.tree-name-btn[aria-label="Open folder photos"]',
+    );
+    await page.waitForSelector(
+      '.file-tree .tree-actions button[aria-label="Delete img.png"]',
+      { timeout: UI_TIMEOUT },
+    );
+    assert.match(
+      await page.$eval(
+        ".file-crumbs",
+        (el: HTMLElement) => el.textContent ?? "",
+      ),
+      /photos/,
+      "the breadcrumb must name the folder we are inside",
+    );
+    // The parent's file must not leak into the child listing.
+    const childText = await page.$eval(
+      ".file-tree",
+      (el: HTMLElement) => el.textContent ?? "",
+    );
+    assert.ok(
+      !childText.includes("parent-only.txt"),
+      `only the current folder's contents must be listed, got: ${childText}`,
+    );
+
+    // Back out through the breadcrumb.
+    await page.click(
+      '.file-crumbs button[aria-label="Open folder Working folder"]',
+    );
+    await page.waitForSelector(
+      '.file-tree button.tree-name-btn[aria-label="Open folder made-in-app"], ' +
+        '.file-tree button.tree-name-btn[aria-label="Open folder photos"]',
+      { timeout: UI_TIMEOUT },
+    );
+
+    // New folder through the prompt modal creates it on disk.
+    await page.click(
+      '.file-toolbar button[aria-label="New folder in this folder"]',
+    );
+    await page.waitForSelector("#prompt-modal:not(.hidden)", {
+      timeout: UI_TIMEOUT,
+    });
+    await page.fill("#prompt-input", "made-in-app");
+    await page.click("#prompt-ok");
+    await page.waitForSelector("#prompt-modal", {
+      state: "hidden",
+      timeout: UI_TIMEOUT,
+    });
+    await waitForIdle();
+    assert.ok(
+      fs.existsSync(path.join(wd, "made-in-app")),
+      "New Folder must create a real directory",
+    );
+    await page.waitForSelector(
+      '.file-tree button.tree-name-btn[aria-label="Open folder made-in-app"]',
+      { timeout: UI_TIMEOUT },
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Live refresh: the panel must follow the working folder on its own, whether
+  // the change came from the app (Add Files / drag-drop write into the same
+  // folder) or directly from the OS. The watcher is the one mechanism behind
+  // all of them, so a filesystem write proves the plumbing end to end.
+  test("file browser — auto-refreshes when the working folder changes externally", async () => {
+    const wd = await page
+      .locator(".session .wd")
+      .first()
+      .textContent()
+      .then((t) => (t ?? "").trim());
+    // The panel was closed by the previous test's breadcrumb navigation? No —
+    // the previous test leaves it open at the working folder. Make sure it is.
+    const treeHidden = await page.$eval(".session-tree", (el: HTMLElement) =>
+      el.classList.contains("hidden"),
+    );
+    if (treeHidden) await page.locator(".btn-tree").first().click();
+    await page.waitForSelector(".file-tree", { timeout: UI_TIMEOUT });
+
+    // Write a file from the TEST process — i.e. through the OS filesystem,
+    // exactly what "Add Files" or a manual save in an editor produces.
+    fs.writeFileSync(path.join(wd, "watch-me.txt"), "fresh");
+
+    await page.waitForSelector(
+      '.file-tree .tree-actions button[aria-label="Delete watch-me.txt"]',
+      { timeout: UI_TIMEOUT * 2 },
+      "the panel must re-list itself without the user touching anything",
+    );
+
+    // Cleanup via the panel itself so the vault stays tidy for later tests.
+    await queueConfirmYes();
+    await page.click(
+      '.file-tree .tree-actions button[aria-label="Delete watch-me.txt"]',
+    );
+    await waitForIdle();
+    assert.ok(!fs.existsSync(path.join(wd, "watch-me.txt")));
+  });
+
+  // -------------------------------------------------------------------------
   test("Open tab — recent vaults list shows the used vault", async () => {
     await switchTab("open");
     // The vault we created and opened should be in the recent list

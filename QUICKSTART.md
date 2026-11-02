@@ -239,6 +239,21 @@ stays locked — only the working copy is accessible.
 With the vault open, go to the **Open Vaults** tab and drag files or folders onto
 the dashed drop zone. Or click **Add Files…**. Then **Close & Save** to commit.
 
+Files are added **into the folder the Files panel is showing**: open the panel
+(**Files**), navigate into a subfolder, and anything you add or drop lands
+there — the toast names the destination. At the top level you don't need the
+panel open at all.
+
+### Browse and organise the working folder
+
+The **Files** panel on a vault card is a small file manager: it lists one
+folder at a time, navigates with breadcrumbs, and positions the destination
+for **Add Files** and drag-and-drop. You can open a file in the OS, rename or
+delete files **and folders**, and create a new folder with **New Folder**. The
+listing refreshes on its own — "Add Files", drag-and-drop, and edits made
+directly in your OS file manager all appear without you clicking anything
+(the same mechanism watches the folder no matter how it changes).
+
 ### Manage a vault
 
 From the **Manage** tab:

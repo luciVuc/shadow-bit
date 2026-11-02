@@ -591,18 +591,52 @@ export function discardVault(
  * Copy files/folders into an open vault's working directory (used by the GUI
  * drag-and-drop and the CLI `add` command). Returns counts of items added and
  * nested symlinks that were silently skipped.
+ *
+ * `parentRel` names the folder the files land in, matching what the file
+ * browser currently shows so "Add Files" and drag-drop add INTO the folder
+ * the user navigated to, not to the vault root. Empty (the default) is the
+ * working folder itself. Traversal/symlink discipline is identical to every
+ * other relPath-shaped operation.
  */
-export function addToSession(vaultPath: string, srcPaths: string[]): AddResult {
+export function addToSession(
+  vaultPath: string,
+  srcPaths: string[],
+  parentRel = "",
+): AddResult {
   const abs = path.resolve(vaultPath);
   const session = findSession(abs);
   if (!session || !fs.existsSync(session.workingDir)) {
     throw new Error("Vault is not open.");
   }
+  const root = path.resolve(session.workingDir);
+  let destDir = root;
+  if (parentRel !== "") {
+    if (typeof parentRel !== "string") {
+      throw new Error("No path given.");
+    }
+    const p = path.resolve(root, parentRel);
+    const rel = path.relative(root, p);
+    if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
+      throw new Error("Invalid path: outside the vault's working folder.");
+    }
+    let st: fs.Stats;
+    try {
+      st = fs.lstatSync(p);
+    } catch {
+      throw new Error("That path is not a folder.");
+    }
+    // Must be a real directory: a symlink "folder" would drop files next to
+    // its target, outside the vault.
+    if (st.isSymbolicLink() || !st.isDirectory()) {
+      throw new Error("That path is not a folder.");
+    }
+    destDir = p;
+  }
   let count = 0;
   let symlinksSkipped = 0;
   for (const src of srcPaths) {
     if (!fs.existsSync(src)) continue;
-    const { skipped } = copyInto(src, session.workingDir);
+    const { skipped } = copyInto(src, destDir);
     count++;
     symlinksSkipped += skipped;
   }
@@ -907,7 +941,7 @@ export function upgradeRecoveryEscrow(
  * Returns the resolved absolute path from the registry — never the raw
  * argument — so a caller cannot smuggle a different path past the check.
  */
-function resolveOpenWorkingDir(workingDir: string): string {
+export function resolveOpenWorkingDir(workingDir: string): string {
   if (typeof workingDir !== "string" || workingDir.length === 0) {
     throw new Error("No working directory given.");
   }
@@ -947,18 +981,162 @@ const MAX_TREE_DEPTH = 12;
 /**
  * Hard ceiling on entries returned in one listing.
  *
- * The whole tree crosses the worker -> main -> renderer boundary as one
+ * The tree crosses the worker -> main -> renderer boundary as one
  * structured-clone message, and the renderer then builds a DOM node per entry,
  * so a vault holding 100k files serialised all of it before the first row
  * appeared. The cap keeps that bounded; the working folder itself is untouched
  * and remains fully reachable from the OS file manager.
  */
-const MAX_TREE_ENTRIES = 5000;
+const MAX_LIST_ENTRIES = 5000;
 
-/** Enumerate an open vault's working directory for the in-app file browser. */
+/**
+ * Resolve a relative path to a location strictly inside `root`, refusing
+ * traversal, absolute paths and empty results.
+ *
+ * Used by every working-dir operation that takes a `relPath` from the
+ * renderer: both the parent path and the final path are checked, so neither
+ * `../../etc` nor a sibling directory that happens to share a prefix can be
+ * reached.
+ */
+function assertRelInside(root: string, relPath: string): string {
+  if (typeof relPath !== "string" || relPath.length === 0) {
+    throw new Error("No path given.");
+  }
+  const abs = path.resolve(root, relPath);
+  const rel = path.relative(root, abs);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error("Invalid path: outside the vault's working folder.");
+  }
+  return abs;
+}
+
+/** Sort browser entries: directories first, then case-insensitive by name. */
+function sortEntries(entries: WorkingDirEntry[]): WorkingDirEntry[] {
+  return entries.sort((a, b) =>
+    a.type === b.type
+      ? a.name.localeCompare(b.name)
+      : a.type === "dir"
+        ? -1
+        : 1,
+  );
+}
+
+/**
+ * List ONE directory of an open vault for the in-app file browser.
+ *
+ * The browser navigates folder by folder (`relPath` selects which one), which
+ * replaced the old whole-tree snapshot: a recursive dump is too large to
+ * re-list on every change event and its depth cap cut real vaults off. Empty
+ * `relPath` (the default) lists the working folder itself.
+ */
+export function listWorkingSubDir(
+  workingDir: string,
+  relPath = "",
+): WorkingDirEntry[] {
+  const root = resolveOpenWorkingDir(workingDir);
+  const dir = relPath === "" ? root : path.resolve(root, relPath);
+  // An empty relPath here means the root; assertRelInside refuses it as "no
+  // path given", so only non-empty paths go through the strict check. The
+  // traversal rejection is the same either way.
+  if (relPath !== "") {
+    const rel = path.relative(root, dir);
+    if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
+      throw new Error("Invalid path: outside the vault's working folder.");
+    }
+  }
+  // lstat, never stat: do not follow a symlink out of the vault, and do not
+  // let one masquerade as a directory we then list.
+  let stat: fs.Stats;
+  try {
+    stat = fs.lstatSync(dir);
+  } catch {
+    return [];
+  }
+  if (!stat.isDirectory()) {
+    throw new Error("That path is not a folder.");
+  }
+  const names = (() => {
+    try {
+      return fs.readdirSync(dir);
+    } catch {
+      return []; // unreadable subdirectory: show nothing rather than fail
+    }
+  })();
+  const out: WorkingDirEntry[] = [];
+  for (const name of names) {
+    if (out.length >= MAX_LIST_ENTRIES) break; // cap reached — stop listing
+    const abs = path.join(dir, name);
+    const entryRel = relPath === "" ? name : `${relPath}/${name}`;
+    // Guarded because the working folder is live: an entry removed between
+    // readdir and lstat must not abort the whole listing the user is looking
+    // at in the file browser.
+    try {
+      const st = fs.lstatSync(abs);
+      if (st.isDirectory()) {
+        out.push({ name, type: "dir", rel: entryRel });
+      } else if (st.isFile()) {
+        out.push({
+          name,
+          type: "file",
+          rel: entryRel,
+          size: st.size,
+          modified: st.mtime.toISOString(),
+        });
+      }
+    } catch {
+      continue;
+    }
+  }
+  return sortEntries(out);
+}
+
+/**
+ * Create a folder inside an open vault's working directory.
+ *
+ * `parentRel` must name an existing directory inside the working folder (or
+ * "" for the root); `name` is sanitised the same way a rename is — a single
+ * path component, no traversal, never "." or "..".
+ */
+export function createDirInWorkingDir(
+  workingDir: string,
+  parentRel = "",
+  name: string,
+): void {
+  const root = resolveOpenWorkingDir(workingDir);
+  if (typeof name !== "string" || name.trim().length === 0) {
+    throw new Error("Enter a folder name.");
+  }
+  const safeName = path.basename(name);
+  if (safeName === "." || safeName === "..") {
+    throw new Error("Invalid name.");
+  }
+  let parentAbs: string;
+  if (parentRel === "") {
+    parentAbs = root;
+  } else {
+    parentAbs = assertRelInside(root, parentRel);
+  }
+  const parentStat = fs.lstatSync(parentAbs); // throws if the parent is gone
+  if (!parentStat.isDirectory()) {
+    throw new Error("That path is not a folder.");
+  }
+  const abs = path.join(parentAbs, safeName);
+  if (fs.existsSync(abs)) {
+    throw new Error(`A folder named "${safeName}" already exists here.`);
+  }
+  fs.mkdirSync(abs);
+}
+
+/**
+ * Enumerate an open vault's whole working directory (recursive snapshot).
+ *
+ * Kept as a one-call full snapshot for uses that genuinely want the entire
+ * tree at once (tests, future exports); the in-app file browser does NOT use
+ * it any more — it navigates with listWorkingSubDir().
+ */
 export function listWorkingDir(workingDir: string): WorkingDirEntry[] {
   const root = resolveOpenWorkingDir(workingDir);
-  let budget = MAX_TREE_ENTRIES;
+  let budget = MAX_LIST_ENTRIES;
   const walk = (dir: string, rel: string, depth: number): WorkingDirEntry[] => {
     const out: WorkingDirEntry[] = [];
     let names: string[];

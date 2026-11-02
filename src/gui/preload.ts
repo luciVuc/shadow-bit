@@ -33,6 +33,21 @@ const api = {
   listFiles: (args: any) => ipcRenderer.invoke("files:list", args),
   deleteFile: (args: any) => ipcRenderer.invoke("files:delete", args),
   renameFile: (args: any) => ipcRenderer.invoke("files:rename", args),
+  createDir: (args: any) => ipcRenderer.invoke("files:createDir", args),
+
+  // ask the main process to watch a working dir and stop watching it. The
+  // main process validates the folder against the session registry; the
+  // watcher stops by itself when the vault closes.
+  watchFiles: (workingDir: string) =>
+    ipcRenderer.invoke("files:watch", { workingDir }),
+  unwatchFiles: (workingDir: string) =>
+    ipcRenderer.invoke("files:unwatch", { workingDir }),
+  // change notifications pushed while a Files panel is open
+  onFilesChanged: (cb: (workingDir: string) => void) => {
+    ipcRenderer.on("files:changed", (_event, workingDir: string) => {
+      if (typeof workingDir === "string") cb(workingDir);
+    });
+  },
 
   // settings / recent vaults — read-only. The main process owns the list; see
   // the note beside settings:getRecent in main.ts.

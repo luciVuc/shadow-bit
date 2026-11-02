@@ -27,6 +27,7 @@ let container: typeof import("../core/container");
 let bundle: typeof import("../core/bundle");
 let fsutil: typeof import("../core/fsutil");
 let sessions: typeof import("../core/sessions");
+let watch: typeof import("../core/watch");
 
 before(async () => {
   vault = await import("../core/vault.js");
@@ -34,6 +35,7 @@ before(async () => {
   bundle = await import("../core/bundle.js");
   fsutil = await import("../core/fsutil.js");
   sessions = await import("../core/sessions.js");
+  watch = await import("../core/watch.js");
 });
 
 after(() => {
@@ -2046,6 +2048,196 @@ test("B4: file operations work inside a real session and block traversal", async
   assert.ok(!fs.existsSync(path.join(r.workingDir, "sub", "b.txt")));
 
   vault.closeVault(vp, PASS);
+});
+
+test("B4: per-directory listing addresses exactly one folder and blocks traversal", async () => {
+  const vp = tmpVault("file-nav");
+  vault.createVault(vp, { password: PASS, generateRecovery: false });
+  const r = vault.openVault(vp, PASS);
+  fs.writeFileSync(path.join(r.workingDir, "a.txt"), "alpha");
+  fs.mkdirSync(path.join(r.workingDir, "sub"));
+  fs.writeFileSync(path.join(r.workingDir, "sub", "b.txt"), "beta");
+  // a sibling of the working dir must never appear as an entry
+  fs.writeFileSync(path.join(path.dirname(r.workingDir), "outside.txt"), "x");
+
+  // Root listing: flat, one level, no children field. ShadowBit seeds the
+  // working dir with its index-suppression markers (.trackerignore, .noindex,
+  // .hidden on Linux), so assert INCLUSION of the seeded files rather than an
+  // exact set. The sibling file outside the working dir must NOT be there.
+  const root = vault.listWorkingSubDir(r.workingDir);
+  const names = root.map((e) => e.name);
+  assert.ok(names.includes("a.txt"), `expected a.txt in ${names.join(", ")}`);
+  assert.ok(names.includes("sub"));
+  assert.ok(!names.includes("outside.txt"), "listing must not leak siblings");
+  assert.equal(root.find((e) => e.name === "a.txt")?.size, 5);
+  assert.ok(root.every((e) => e.children === undefined));
+
+  // Listing a folder returns only ITS children, rel paths include the prefix.
+  const sub = vault.listWorkingSubDir(r.workingDir, "sub");
+  assert.deepEqual(
+    sub.map((e) => e.name),
+    ["b.txt"],
+  );
+  assert.equal(sub[0].rel, "sub/b.txt");
+
+  // Not a folder (a file path) is refused rather than silently empty.
+  assert.throws(
+    () => vault.listWorkingSubDir(r.workingDir, "a.txt"),
+    /not a folder/i,
+  );
+
+  // Traversal in every form is refused. (Backslash forms are not a vector:
+  // `path.resolve` on POSIX treats "\sub" as a literal filename, and on
+  // Windows it is a separator — path.resolve there lands INSIDE the root.)
+  for (const bad of ["..", "../sub", "../../etc", "/etc"]) {
+    assert.throws(
+      () => vault.listWorkingSubDir(r.workingDir, bad),
+      /invalid|outside/i,
+      `listing ${JSON.stringify(bad)} must be refused`,
+    );
+  }
+
+  // A directory that vanished between sessions is tolerated as empty at the
+  // ROOT but a MISSING subfolder is an empty listing, not a crash (live tree).
+  assert.deepEqual(vault.listWorkingSubDir(r.workingDir, "sub/ghost"), []);
+
+  vault.closeVault(vp, PASS);
+});
+
+test("B4: addToSession targets the browser's current folder, not the root", async () => {
+  const vp = tmpVault("file-add");
+  vault.createVault(vp, { password: PASS, generateRecovery: false });
+  const r = vault.openVault(vp, PASS);
+  fs.mkdirSync(path.join(r.workingDir, "sub"));
+
+  const srcDir = path.join(tmpRoot, "add-src");
+  fs.mkdirSync(srcDir, { recursive: true });
+  fs.writeFileSync(path.join(srcDir, "f1.txt"), "one");
+  fs.mkdirSync(path.join(srcDir, "nested-dir"));
+  fs.writeFileSync(path.join(srcDir, "nested-dir", "f2.txt"), "two");
+
+  // Default: the working folder root.
+  vault.addToSession(vp, [path.join(srcDir, "f1.txt")]);
+  assert.ok(fs.existsSync(path.join(r.workingDir, "f1.txt")));
+
+  // A parentRel drops the file inside that folder.
+  vault.addToSession(vp, [path.join(srcDir, "f1.txt")], "sub");
+  assert.ok(fs.existsSync(path.join(r.workingDir, "sub", "f1.txt")));
+  assert.ok(!fs.existsSync(path.join(r.workingDir, "f2.txt")));
+
+  // A whole directory tree copied under the subfolder keeps its structure.
+  const res = vault.addToSession(vp, [path.join(srcDir, "nested-dir")], "sub");
+  assert.equal(res.count, 1);
+  assert.ok(
+    fs.existsSync(path.join(r.workingDir, "sub", "nested-dir", "f2.txt")),
+  );
+
+  // Traversal and non-directories are refused; nothing is written anywhere.
+  fs.writeFileSync(path.join(path.dirname(r.workingDir), "sibling.txt"), "x");
+  for (const bad of ["../sibling", "/etc", "sub/../.."]) {
+    assert.throws(
+      () => vault.addToSession(vp, [path.join(srcDir, "f1.txt")], bad),
+      /invalid|outside/i,
+      `addToSession into ${JSON.stringify(bad)} must be refused`,
+    );
+  }
+  assert.ok(
+    !fs.existsSync(path.join(path.dirname(r.workingDir), "sibling", "f1.txt")),
+    "nothing may be written outside the working folder",
+  );
+  // A missing parent folder is a domain error, not ENOENT gibberish.
+  assert.throws(
+    () => vault.addToSession(vp, [path.join(srcDir, "f1.txt")], "ghost"),
+    /not a folder/i,
+  );
+
+  vault.closeVault(vp, PASS);
+});
+
+test("B4: folder creation is one level deep and refuses traversal/duplicates", async () => {
+  const vp = tmpVault("file-mkdir");
+  vault.createVault(vp, { password: PASS, generateRecovery: false });
+  const r = vault.openVault(vp, PASS);
+  fs.mkdirSync(path.join(r.workingDir, "sub"));
+
+  vault.createDirInWorkingDir(r.workingDir, "", "new-dir");
+  vault.createDirInWorkingDir(r.workingDir, "sub", "nested");
+  assert.ok(fs.existsSync(path.join(r.workingDir, "new-dir")));
+  assert.ok(fs.existsSync(path.join(r.workingDir, "sub", "nested")));
+
+  assert.throws(
+    () => vault.createDirInWorkingDir(r.workingDir, "", "new-dir"),
+    /already exists/i,
+  );
+  assert.throws(
+    () => vault.createDirInWorkingDir(r.workingDir, "", ""),
+    /enter a folder name/i,
+  );
+  // basename() sanitisation: "sub" anywhere in the name stays ONE component.
+  vault.createDirInWorkingDir(r.workingDir, "", "a/b");
+  assert.ok(
+    fs.existsSync(path.join(r.workingDir, "b")),
+    "/'s tail is the name",
+  );
+  assert.ok(!fs.existsSync(path.join(r.workingDir, "a")));
+  for (const bad of ["..", "."]) {
+    assert.throws(
+      () => vault.createDirInWorkingDir(r.workingDir, "", bad),
+      /invalid name/i,
+    );
+  }
+  // A non-directory parent is refused.
+  fs.writeFileSync(path.join(r.workingDir, "plain.txt"), "x");
+  assert.throws(
+    () => vault.createDirInWorkingDir(r.workingDir, "plain.txt", "x"),
+    /not a folder/i,
+  );
+
+  vault.closeVault(vp, PASS);
+});
+
+test("B4: watchWorkingDir fires on changes and stops itself when the vault closes", async () => {
+  const vp = tmpVault("file-watch");
+  vault.createVault(vp, { password: PASS, generateRecovery: false });
+  const r = vault.openVault(vp, PASS);
+  // Pre-create a subfolder so BOTH a root and a subdir watcher are running
+  // (the point of change watching: a Linux fs.watch only sees its own dir).
+  fs.mkdirSync(path.join(r.workingDir, "sub"));
+
+  let fired = 0;
+  let lastArg = "";
+  const stop = watch.watchWorkingDir(r.workingDir, (wd) => {
+    fired++;
+    lastArg = wd;
+  });
+
+  const waitFired = async (n: number) => {
+    const deadline = Date.now() + 5000;
+    while (fired < n && Date.now() < deadline) {
+      await new Promise((res) => setTimeout(res, 100));
+    }
+    return fired >= n;
+  };
+  assert.ok(await waitFired(1), "the primed initial scan must fire once");
+  // Change INSIDE the subdirectory — the case a single non-recursive watcher
+  // on the root would miss on Linux.
+  fs.writeFileSync(path.join(r.workingDir, "sub", "x.txt"), "1");
+  assert.ok(await waitFired(2), "a subdir change must also fire");
+  assert.equal(lastArg, path.resolve(r.workingDir));
+  const firedBefore = fired;
+
+  // Closing the vault erases the working dir and removes the session, so the
+  // next change must NOT fire forever more.
+  vault.closeVault(vp, PASS);
+  fired = 0;
+  fs.mkdirSync(r.workingDir, { recursive: true }); // recreate the folder on disk
+  fs.writeFileSync(path.join(r.workingDir, "y.txt"), "1");
+  await new Promise((res) => setTimeout(res, 1200));
+  assert.equal(fired, 0, "a closed vault must stop firing");
+
+  stop(); // explicit stop must be idempotent-safe
+  stop();
+  void firedBefore;
 });
 
 test("H1: a payload that inflates past the cap is refused, not OOM-killed", async () => {

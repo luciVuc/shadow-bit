@@ -92,14 +92,26 @@ parentPort.on("message", (msg: { id: number; op: string; args: any }) => {
         result = null;
         break;
       case "addFiles":
-        result = vault.addToSession(msg.args.vaultPath, msg.args.paths);
+        result = vault.addToSession(
+          msg.args.vaultPath,
+          msg.args.paths,
+          msg.args.parentRel,
+        );
         break;
       // In-app file browser. These touch decrypted content, so they live here
       // rather than on the main thread — both to keep that thread free and to
       // put resolveOpenWorkingDir()'s session-registry check on the same side
       // of the boundary as every other vault operation.
       case "listFiles":
-        result = vault.listWorkingDir(msg.args.workingDir);
+        result = vault.listWorkingSubDir(msg.args.workingDir, msg.args.relPath);
+        break;
+      case "createDir":
+        vault.createDirInWorkingDir(
+          msg.args.workingDir,
+          msg.args.parentRel,
+          msg.args.name,
+        );
+        result = null;
         break;
       case "deleteFile":
         vault.deleteFromWorkingDir(msg.args.workingDir, msg.args.relPath);

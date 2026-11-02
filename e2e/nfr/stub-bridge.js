@@ -52,6 +52,9 @@
     "listFiles",
     "deleteFile",
     "renameFile",
+    "createDir",
+    "watchFiles",
+    "unwatchFiles",
     "getRecent",
     "getAutoLock",
     "setAutoLock",
@@ -161,6 +164,18 @@
     },
     renameFile: function () {
       return Promise.resolve(null);
+    },
+    createDir: function () {
+      return Promise.resolve(null);
+    },
+    watchFiles: function () {
+      return Promise.resolve(null);
+    },
+    unwatchFiles: function () {
+      return Promise.resolve(null);
+    },
+    onFilesChanged: function (cb) {
+      listen("onFilesChanged", cb);
     },
 
     getRecent: function () {
